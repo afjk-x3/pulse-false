@@ -1,0 +1,262 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { 
+  ShieldCheck, 
+  Download, 
+  Trash2, 
+  EyeOff, 
+  Lock, 
+  Database,
+  Info,
+  AlertTriangle,
+  Check
+} from 'lucide-react';
+import { PulseDB } from '../lib/db';
+import { useAccessibility } from '../context/AccessibilityContext';
+
+export default function PrivacyCenter() {
+  const { highContrast } = useAccessibility();
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [purgeSuccess, setPurgeSuccess] = useState(false);
+  const [cvGlobalDisabled, setCvGlobalDisabled] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const config = PulseDB.getAdminConfig();
+      setCvGlobalDisabled(config.webcamCVGlobalDisabled || false);
+    }, 0);
+
+    const handleCvChange = () => {
+      const config = PulseDB.getAdminConfig();
+      setCvGlobalDisabled(config.webcamCVGlobalDisabled || false);
+      if (config.webcamCVGlobalDisabled) {
+        localStorage.setItem('pulse-cv-active', 'false');
+      }
+    };
+    window.addEventListener('pulse-cv-global-change', handleCvChange);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pulse-cv-global-change', handleCvChange);
+    };
+  }, []);
+
+  const handleExportData = () => {
+    // Collect all data from localStorage
+    const data = {
+      sentimentLogs: PulseDB.getSentimentLogs(),
+      burnoutIndex: PulseDB.getBurnoutRiskIndex(),
+      outboxMessages: PulseDB.getOutboxMessages(),
+      kudos: PulseDB.getKudos(),
+      supportMessages: PulseDB.getSupportMessages(),
+      accessibilityPreferences: {
+        dyslexic: localStorage.getItem('pulse-dyslexic') === 'true',
+        ruler: localStorage.getItem('pulse-ruler') === 'true',
+        contrast: localStorage.getItem('pulse-contrast') === 'true',
+        scale: localStorage.getItem('pulse-font-scale') || 'normal',
+      },
+      telemetrySettings: {
+        computerVisionActive: localStorage.getItem('pulse-cv-active') !== 'false'
+      },
+      exportTimestamp: new Date().toISOString()
+    };
+
+    // Create JSON download link
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(data, null, 2)
+    )}`;
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', jsonString);
+    downloadAnchor.setAttribute('download', `pulse-wbg-telemetry-export-${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handlePurgeData = () => {
+    setPurgeSuccess(true);
+    setTimeout(() => {
+      PulseDB.purgeUserData();
+    }, 2000);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Introduction Card */}
+      <div className={`p-6 bg-white rounded-2xl border flex flex-col sm:flex-row gap-5 items-start justify-between ${
+        highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+      }`}>
+        <div className="space-y-2">
+          <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
+            <ShieldCheck className="h-5.5 w-5.5 text-teal-600" />
+            <span>Your Well-Being Privacy Agreement</span>
+          </h2>
+          <p className="text-xs text-neutral-500 leading-relaxed max-w-2xl">
+            Pulse is built to protect your privacy. All calculations happen directly on your own device—never on a company server. Our goal is to support your health without watching or tracking you. We guarantee your details remain 100% private.
+          </p>
+        </div>
+        <span className="px-3 py-1 bg-[#EAEFE9] text-[#2F4F2F] border border-[#C3D2C1] rounded-full text-[10px] font-bold shrink-0">
+          PRIVACY GUARANTEED
+        </span>
+      </div>
+
+      {/* Protocol Explanation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* k-Anonymity card */}
+        <div className={`p-6 bg-white rounded-2xl border space-y-4 ${
+          highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        }`}>
+          <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
+            <Lock className="h-5 w-5 text-teal-600" />
+            <h3 className="text-xs font-bold text-neutral-800">Group-Only Sharing (Privacy Protection)</h3>
+          </div>
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            To make sure managers can never guess who submitted what answer, we never show scores for teams with fewer than <strong>5 active people</strong>. Your answers are completely hidden inside a group average.
+          </p>
+          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[10px] leading-relaxed text-neutral-400 space-y-1">
+            <strong className="text-neutral-600 block">How it works:</strong>
+            <p>If your team has fewer than 5 members, or if fewer than 5 people log their mood, all group charts are automatically blurred out. Team summaries only display when there is a large enough group to keep you anonymous.</p>
+          </div>
+        </div>
+
+        {/* Local CV processing card */}
+        <div className={`p-6 bg-white rounded-2xl border space-y-4 ${
+          highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        } ${cvGlobalDisabled ? 'opacity-60' : ''}`}>
+          {cvGlobalDisabled && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>Webcam CV has been disabled org-wide by your administrator. Individual preferences are overridden.</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
+            <EyeOff className="h-5 w-5 text-teal-600" />
+            <h3 className="text-xs font-bold text-neutral-800">On-Device Camera Analysis</h3>
+          </div>
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            If you turn it on, the system uses your webcam to look at posture and eye blinks to guess if you are tired. It never records your face, takes photos, or saves video.
+          </p>
+          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-[10px] leading-relaxed text-neutral-400 space-y-1">
+            <strong className="text-neutral-600 block">Data Safety Guarantee:</strong>
+            <p>All camera calculations happen directly inside your browser. No video, images, or facial recognition profiles are ever saved, stored, or sent over the internet. Your webcam stream never leaves your computer.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Management Center */}
+      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${
+        highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+      }`}>
+        <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
+          <Database className="h-5 w-5 text-teal-600" />
+          <h3 className="text-xs font-bold text-neutral-800">Download & Delete Your Data</h3>
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="block text-xs font-bold text-neutral-700">Export & Purge Controls</span>
+            <p className="text-[11px] text-neutral-400 leading-relaxed max-w-xl">
+              You own your information. You can download a copy of all your check-ins and settings as a file, or permanently wipe your profile from this computer.
+            </p>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2.5">
+            <button
+              onClick={handleExportData}
+              className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                highContrast
+                  ? 'bg-black text-white hover:bg-neutral-800 border-2 border-black'
+                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
+              }`}
+            >
+              <Download className="h-4.5 w-4.5" />
+              <span>Download My Data (JSON File)</span>
+            </button>
+
+            <button
+              onClick={() => setShowPurgeConfirm(true)}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 flex items-center gap-1.5 transition focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <Trash2 className="h-4.5 w-4.5" />
+              <span>Delete My Profile</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Purge Profile Warning dialog */}
+      {showPurgeConfirm && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/40 backdrop-blur-xs animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="purge-title"
+          aria-describedby="purge-desc"
+        >
+          <div className={`w-full max-w-md p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+            highContrast ? 'border-black text-black' : 'border-neutral-100'
+          }`}>
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 id="purge-title" className="text-sm font-bold text-neutral-800">
+                  Confirm Profile Deletion?
+                </h3>
+                <span className="text-[10px] font-semibold text-red-600 block mt-0.5">This cannot be undone</span>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div id="purge-desc" className="text-xs text-neutral-500 leading-relaxed space-y-2">
+              {purgeSuccess ? (
+                <div className="py-4 text-center space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
+                    <Check className="h-6 w-6 stroke-[3.0]" />
+                  </div>
+                  <p className="font-bold text-neutral-800">Data Deleted Successfully</p>
+                  <p className="text-[10px] text-neutral-400">Clearing browser memory and resetting database...</p>
+                </div>
+              ) : (
+                <>
+                  <p>
+                    You are requesting to permanently delete your mood logs, saved kudos, and settings from this browser.
+                  </p>
+                  <div className="p-3 rounded-lg bg-red-50/50 border border-red-100/50 text-[10px] text-neutral-600 flex items-start gap-2">
+                    <Info className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
+                    <p>
+                      Deleting your data will reset your Burnout Risk Index, clear any pending emails scheduled for after-hours, and erase your account data on this device.
+                    </p>
+                  </div>
+                  <p className="pt-2">Click below to confirm deletion request.</p>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!purgeSuccess && (
+              <div className="flex items-center justify-end gap-2 border-t pt-3.5 border-neutral-100">
+                <button
+                  onClick={() => setShowPurgeConfirm(false)}
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePurgeData}
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1.5"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete All Data</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

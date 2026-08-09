@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console - Pulse (Static Hi-Fi)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #FAF9F6;
+      --foreground: #262626;
+      --border-color: #f1f0ea;
+    }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: var(--background); color: var(--foreground); }
+    .backdrop-blur-md { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  </style>
+</head>
+<body>
+
+<div class="min-h-screen flex bg-[#FAF9F6] selection:bg-teal-150">
+  
+  <!-- Mobile Sidebar Hamburger Trigger -->
+  <div class="lg:hidden fixed top-4 left-4 z-40">
+    <button class="p-2.5 rounded-lg bg-white border border-neutral-200 text-neutral-800 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-teal-600 transition-colors shadow-sm">
+      <i data-lucide="menu" class="h-6 w-6"></i>
+    </button>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 bottom-0 left-0 z-30 flex flex-col w-72 bg-white border-r transition-transform duration-300 ease-in-out lg:translate-x-0 -translate-x-full border-[#f1f0ea]">
+    <div class="p-6 border-b flex items-center justify-between border-[#f1f0ea]">
+      <div class="relative w-48 h-12 flex items-center">
+        <span class="font-black text-2xl tracking-tight text-teal-700">Pulse <span class="text-neutral-900">Guardian</span></span>
+      </div>
+    </div>
+    <nav class="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
+      <button class="w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-50/70 border-l-4 border-teal-600 text-teal-900 font-semibold">
+        <i data-lucide="sliders" class="h-5 w-5 shrink-0 text-teal-600"></i>
+        <div>
+          <span class="block font-medium leading-none">Admin Control</span>
+          <span class="block text-[11px] mt-0.5 font-normal text-teal-700/80">System configuration</span>
+        </div>
+      </button>
+      <button class="w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50/80 border-l-4 border-transparent">
+        <i data-lucide="lock" class="h-5 w-5 shrink-0 text-neutral-500"></i>
+        <div>
+          <span class="block font-medium leading-none">Privacy Center</span>
+          <span class="block text-[11px] mt-0.5 font-normal text-neutral-400">Data control and compliance</span>
+        </div>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Main Container -->
+  <div class="flex-1 flex flex-col min-h-screen lg:pl-72 relative">
+    
+    <!-- Header -->
+    <header class="sticky top-0 right-0 z-20 flex h-20 items-center justify-between px-6 lg:px-8 bg-white/80 backdrop-blur-md border-b border-[#f1f0ea] select-none">
+      <div class="flex items-center gap-3 pl-14 lg:pl-0">
+        <!-- Mobile-only small logo marker -->
+        <div class="lg:hidden relative w-8 h-8 shrink-0">
+          <img src="/logo-icon.svg" alt="Pulse mark" class="object-contain w-full h-full" />
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-neutral-800 focus:outline-none">HR/IT Admin Console</h1>
+          <p class="text-xs text-neutral-400 hidden sm:block">AxionHR Well-Being Guardian Dashboard</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <!-- CV Toggle -->
+        <div class="relative">
+          <button class="p-2.5 rounded-full relative transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-50 text-teal-600">
+            <i data-lucide="video" class="h-5 w-5"></i>
+            <span class="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-teal-400 ring-2 ring-white"></span>
+          </button>
+        </div>
+        
+        <!-- Accessibility Hub -->
+        <div class="relative">
+          <button class="p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 border border-transparent">
+            <i data-lucide="accessibility" class="h-5 w-5"></i>
+          </button>
+        </div>
+        
+        <!-- Logout -->
+        <button class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#f1f0ea] bg-white text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors focus:ring-2 focus:ring-teal-500">
+          <i data-lucide="log-out" class="h-3.5 w-3.5"></i>
+          <span>Exit Portal</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable Main View Content -->
+    <main class="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 max-w-7xl w-full mx-auto">
+      <div class="space-y-6">
+        
+        <!-- Intro Header -->
+        <div class="p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between border-[#f1f0ea]">
+          <div class="space-y-1.5">
+            <h2 class="text-base font-bold text-neutral-800 flex items-center gap-2">
+              <i data-lucide="sliders" class="h-5.5 w-5.5 text-teal-600"></i>
+              <span>HR/IT Admin Console</span>
+            </h2>
+            <p class="text-xs text-neutral-500 leading-relaxed max-w-2xl">
+              Configure org-wide working hour boundaries, privacy floors for team data aggregation, local EAP referral destinations, and manage emergency system overrides.
+            </p>
+          </div>
+          <span class="px-3 py-1 bg-neutral-900 text-white rounded-full text-[10px] font-bold shrink-0">
+            ROLE: HR ADMINISTRATOR
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Settings Data Grid Form (2 cols) -->
+          <form class="p-6 bg-white rounded-2xl border lg:col-span-2 space-y-5 flex flex-col justify-between border-[#f1f0ea]">
+            <div class="space-y-4">
+              <span class="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider border-b pb-2 border-neutral-100">
+                Org-Wide System Preferences
+              </span>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Working hours start -->
+                <div>
+                  <label class="block text-xs font-bold text-neutral-700 mb-1">Standard Workday Start</label>
+                  <input type="time" value="09:00" class="w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold border-neutral-200" />
+                </div>
+                <!-- Working hours end -->
+                <div>
+                  <label class="block text-xs font-bold text-neutral-700 mb-1">Standard Workday End</label>
+                  <input type="time" value="18:00" class="w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold border-neutral-200" />
+                </div>
+                <!-- Holiday Calendar -->
+                <div>
+                  <label class="block text-xs font-bold text-neutral-700 mb-1">Default Holiday Calendar</label>
+                  <select class="w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold border-neutral-200">
+                    <option value="US Federal" selected>US Federal Calendar</option>
+                    <option value="UK Bank Holidays">UK Bank Holidays</option>
+                    <option value="EU Standard">EU Standard Calendar</option>
+                    <option value="APAC Standard">APAC Standard Calendar</option>
+                  </select>
+                </div>
+                <!-- k-anonymity floor -->
+                <div>
+                  <label class="block text-xs font-bold text-neutral-700 mb-1">k-Anonymity Privacy Floor</label>
+                  <select class="w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold border-neutral-200">
+                    <option value="5" selected>k=5 (Standard recommendation)</option>
+                    <option value="8">k=8 (Stricter privacy rules)</option>
+                    <option value="10">k=10 (Highly conservative)</option>
+                    <option value="12">k=12 (Maximum security)</option>
+                  </select>
+                </div>
+              </div>
+              <!-- EAP counseling link -->
+              <div>
+                <label class="block text-xs font-bold text-neutral-700 mb-1">Employee Assistance Program (EAP) Referral URL</label>
+                <input type="url" value="https://company.intranet/eap-wellbeing" class="w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold border-neutral-200" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between border-t pt-4 mt-6 border-neutral-100">
+              <span class="text-[10px] text-neutral-400">* Settings alterations apply to all non-override employee profiles.</span>
+              <button type="button" class="px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-600 hover:bg-teal-700 text-white shadow-xs">
+                <i data-lucide="save" class="h-4 w-4"></i>
+                <span>Save Settings</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- System Paused Red Kill Switch (1 col) -->
+          <div class="p-6 bg-white rounded-2xl border flex flex-col justify-between items-center text-center border-[#f1f0ea]">
+            <div class="space-y-4 w-full">
+              <span class="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                Emergency Kill Switch
+              </span>
+              <div class="h-20 w-20 rounded-full flex items-center justify-center mx-auto border-2 bg-neutral-50 text-neutral-400 border-neutral-200">
+                <i data-lucide="alert-octagon" class="h-10 w-10 stroke-[2.2]"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-neutral-800 leading-snug">System Active</h3>
+                <span class="text-[10px] text-neutral-400 font-semibold block mt-0.5">Collecting anonymous telemetry</span>
+              </div>
+              <p class="text-[10px] text-neutral-400 max-w-xs mx-auto leading-normal">
+                Activating this pauses the sentiment survey popups, suspends CV eye tracking, and locks out telemetry sync databases globally.
+              </p>
+            </div>
+            <button type="button" class="w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 mt-6 bg-red-600 hover:bg-red-750 text-white border-transparent shadow-md">
+              <i data-lucide="shield-alert" class="h-4.5 w-4.5"></i>
+              <span>PAUSE PULSE SYSTEM</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== Webcam CV Global Kill Switch ===== -->
+        <div class="p-6 bg-white rounded-2xl border border-[#f1f0ea]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 rounded-full flex items-center justify-center border-2 bg-emerald-50 text-emerald-600 border-emerald-200">
+                <i data-lucide="eye" class="h-5 w-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-neutral-800">Org-Wide Webcam CV Enforcement</h3>
+                <p class="text-[10px] text-neutral-400 mt-0.5">Employees may individually opt in to webcam CV</p>
+              </div>
+            </div>
+            <button class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 bg-emerald-500" role="switch" aria-checked="true">
+              <span class="inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform translate-x-6"></span>
+            </button>
+          </div>
+        </div>
+
+
+
+        <!-- ===== Module Opt-in Analytics ===== -->
+        <div class="p-6 bg-white rounded-2xl border space-y-5 border-[#f1f0ea]">
+          <div class="flex items-center gap-2 border-b pb-3 border-neutral-100">
+            <i data-lucide="bar-chart-3" class="h-5 w-5 text-teal-600"></i>
+            <h3 class="text-base font-bold text-neutral-800">Module Opt-in Analytics</h3>
+          </div>
+          <p class="text-xs text-neutral-500">Org-wide adoption rates for optional well-being modules.</p>
+
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-neutral-700 flex items-center gap-1.5"><i data-lucide="video" class="h-4 w-4"></i> Webcam Computer Vision</span>
+                <span class="font-extrabold text-neutral-400">34% opted in</span>
+              </div>
+              <div class="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full bg-teal-600 transition-all duration-700" style="width: 34%;"></div>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-neutral-700 flex items-center gap-1.5"><i data-lucide="globe" class="h-4 w-4"></i> Messaging Sync & Analysis</span>
+                <span class="font-extrabold text-neutral-400">72% opted in</span>
+              </div>
+              <div class="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full bg-blue-600 transition-all duration-700" style="width: 72%;"></div>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-neutral-700 flex items-center gap-1.5"><i data-lucide="eye" class="h-4 w-4"></i> Support Circles</span>
+                <span class="font-extrabold text-neutral-400">58% opted in</span>
+              </div>
+              <div class="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full bg-amber-600 transition-all duration-700" style="width: 58%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Compliance Audit Log ===== -->
+        <div class="p-6 bg-white rounded-2xl border space-y-5 border-[#f1f0ea]">
+          <div class="flex items-center justify-between border-b pb-3 border-neutral-100">
+            <div class="flex items-center gap-2">
+              <i data-lucide="globe" class="h-5 w-5 text-teal-600"></i>
+              <h3 class="text-base font-bold text-neutral-800">Compliance Audit Log</h3>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" class="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <i data-lucide="file-json" class="h-3.5 w-3.5"></i> Export JSON
+              </button>
+              <button type="button" class="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <i data-lucide="file-spreadsheet" class="h-3.5 w-3.5"></i> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="max-h-64 overflow-y-auto space-y-1">
+            <div class="grid grid-cols-[80px_1fr_140px] text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-3 py-2 border-b border-neutral-100">
+              <span>Actor</span>
+              <span>Action</span>
+              <span class="text-right">Timestamp</span>
+            </div>
+            <div class="grid grid-cols-[80px_1fr_140px] text-[11px] px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition">
+              <span class="font-bold text-neutral-700">admin@...</span>
+              <span class="text-neutral-600 truncate pr-2">Updated Data Residency to EU</span>
+              <span class="text-neutral-400 text-right text-[10px]">Aug 9, 09:12 AM</span>
+            </div>
+            <div class="grid grid-cols-[80px_1fr_140px] text-[11px] px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition">
+              <span class="font-bold text-neutral-700">system_scim</span>
+              <span class="text-neutral-600 truncate pr-2">Provisioned user s.connor</span>
+              <span class="text-neutral-400 text-right text-[10px]">Aug 9, 08:05 AM</span>
+            </div>
+            <div class="grid grid-cols-[80px_1fr_140px] text-[11px] px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition">
+              <span class="font-bold text-amber-600">emp_8a2b</span>
+              <span class="text-neutral-600 truncate pr-2">Calendar Guard Override (2 invitees)</span>
+              <span class="text-neutral-400 text-right text-[10px]">Aug 8, 07:00 PM</span>
+            </div>
+            <div class="grid grid-cols-[80px_1fr_140px] text-[11px] px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition">
+              <span class="font-bold text-neutral-700">admin@...</span>
+              <span class="text-neutral-600 truncate pr-2">Enabled SCIM Directory Sync</span>
+              <span class="text-neutral-400 text-right text-[10px]">Aug 8, 02:30 PM</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

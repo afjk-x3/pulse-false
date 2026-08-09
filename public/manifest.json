@@ -1,0 +1,21 @@
+{
+  "name": "Pulse: AxionHR Well-Being Guardian",
+  "short_name": "Pulse WBG",
+  "description": "Enterprise-grade employee well-being dashboard and privacy-safe guardian.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9F6",
+  "theme_color": "#FAF9F6",
+  "icons": [
+    {
+      "src": "/next.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/next.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

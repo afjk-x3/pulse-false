@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="100%" height="100%">
+  <!-- Icon Squircle Background -->
+  <rect x="8" y="8" width="64" height="64" rx="20" fill="#e9f4f2" />
+  
+  <!-- Teal Lightning Bolt Icon -->
+  <path 
+    d="M44 20 L28 48 H42 L38 64 L54 38 H40 Z" 
+    fill="none" 
+    stroke="#109182" 
+    stroke-width="4.5" 
+    stroke-linecap="round" 
+    stroke-linejoin="round" 
+  />
+  
+  <!-- "Pulse" Typography (Dark Charcoal) -->
+  <text 
+    x="88" 
+    y="51" 
+    font-family="system-ui, -apple-system, sans-serif" 
+    font-weight="700" 
+    font-size="34" 
+    letter-spacing="-0.03em"
+    fill="#262626"
+  >Pulse</text>
+  
+  <!-- "AxionHR" Typography (Teal) -->
+  <text 
+    x="180" 
+    y="51" 
+    font-family="system-ui, -apple-system, sans-serif" 
+    font-weight="400" 
+    font-size="32" 
+    letter-spacing="-0.02em"
+    fill="#109182"
+  >AxionHR</text>
+</svg>
