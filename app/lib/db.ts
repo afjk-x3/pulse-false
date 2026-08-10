@@ -12,6 +12,9 @@ export interface UserAccount {
   workingHoursStart?: string;
   workingHoursEnd?: string;
   password?: string;
+  phone?: string;
+  address?: string;
+  profileImage?: string;
 }
 
 export interface CalendarOverrideRecord {
@@ -54,7 +57,8 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     email: 'alex.rivera@axionhr.com',
     timezone: 'America/New_York',
     workingHoursStart: '09:00',
-    workingHoursEnd: '17:00'
+    workingHoursEnd: '17:00',
+    password: 'password123'
   },
   {
     username: 'derek',
@@ -66,7 +70,8 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     email: 'derek.vance@axionhr.com',
     timezone: 'America/Chicago',
     workingHoursStart: '08:30',
-    workingHoursEnd: '17:30'
+    workingHoursEnd: '17:30',
+    password: 'password123'
   },
   {
     username: 'priya',
@@ -78,7 +83,8 @@ export const DEFAULT_ACCOUNTS: UserAccount[] = [
     email: 'priya.sharma@axionhr.com',
     timezone: 'Europe/London',
     workingHoursStart: '09:00',
-    workingHoursEnd: '18:00'
+    workingHoursEnd: '18:00',
+    password: 'password123'
   }
 ];
 
@@ -609,4 +615,44 @@ export class PulseDB {
     localStorage.setItem('pulse-bri-shifts', JSON.stringify(shifts));
     return record;
   }
+
+  static updateUserAccount(username: string, updatedFields: Partial<UserAccount>): boolean {
+    const accounts = this.getUserAccounts();
+    const index = accounts.findIndex(a => a.username.toLowerCase() === username.toLowerCase());
+    if (index === -1) return false;
+    accounts[index] = { ...accounts[index], ...updatedFields };
+    localStorage.setItem('pulse-user-accounts', JSON.stringify(accounts));
+    return true;
+  }
+
+  // === Scheduled Meetings ===
+
+  static getScheduledMeetings(): ScheduledMeeting[] {
+    if (typeof window === 'undefined') return [];
+    const data = localStorage.getItem('pulse-scheduled-meetings');
+    if (!data) return [];
+    return JSON.parse(data);
+  }
+
+  static addScheduledMeeting(meeting: Omit<ScheduledMeeting, 'id'>): ScheduledMeeting {
+    const meetings = this.getScheduledMeetings();
+    const newMeeting: ScheduledMeeting = {
+      ...meeting,
+      id: Math.random().toString(36).substring(2, 9)
+    };
+    meetings.push(newMeeting);
+    localStorage.setItem('pulse-scheduled-meetings', JSON.stringify(meetings));
+    return newMeeting;
+  }
+}
+
+export interface ScheduledMeeting {
+  id: string;
+  title: string;
+  date: string;
+  start: string;
+  end: string;
+  creator: string;
+  invitees: string[];
+  isOverride: boolean;
 }

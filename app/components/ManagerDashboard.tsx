@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, EyeOff, ArrowRight, ShieldCheck, UserCheck, Plus, ShieldAlert, TrendingUp } from 'lucide-react';
-import { PulseDB, UserAccount } from '../lib/db';
+import { Users, EyeOff, ArrowRight, ShieldCheck, UserCheck, Plus, ShieldAlert, TrendingUp, Calendar, AlertTriangle } from 'lucide-react';
+import { PulseDB, UserAccount, ScheduledMeeting } from '../lib/db';
 import { useAccessibility } from '../context/AccessibilityContext';
 
 export default function ManagerDashboard() {
@@ -24,6 +24,7 @@ export default function ManagerDashboard() {
 
   // Shared trends
   const [sharedTrends, setSharedTrends] = useState<{ name: string; avatar: string; data: number[] }[]>([]);
+  const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -41,6 +42,8 @@ export default function ManagerDashboard() {
       } else {
         setSharedTrends([]);
       }
+      // Load scheduled meetings
+      setScheduledMeetings(PulseDB.getScheduledMeetings());
     }, 0);
     return () => clearTimeout(timer);
   }, []);
@@ -540,6 +543,61 @@ export default function ManagerDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* ===== Scheduled Meetings (Calendar Guard Audit) ===== */}
+      <div className={`p-6 bg-white rounded-2xl border space-y-4 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+        <div className="flex items-center gap-2 border-b pb-3 mb-5 border-neutral-100">
+          <Calendar className="h-5 w-5 text-teal-600" />
+          <h3 className="text-base font-bold text-neutral-800">Team Scheduled Meetings (Calendar Guard Adherence)</h3>
+        </div>
+
+        {scheduledMeetings.length === 0 ? (
+          <div className="py-8 text-center space-y-2">
+            <p className="text-xs font-semibold text-neutral-500">No scheduled meetings logged yet.</p>
+            <p className="text-[10px] text-neutral-400 max-w-sm mx-auto">When team members schedule meetings using Calendar Guard, they will appear here. Overrides will be flagged for review.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-neutral-100 text-neutral-400 font-semibold">
+                  <th className="py-2">Meeting Title</th>
+                  <th className="py-2">Date & Time</th>
+                  <th className="py-2">Organized By</th>
+                  <th className="py-2">Invitees</th>
+                  <th className="py-2 text-right">Right-to-Disconnect Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {scheduledMeetings.map((meeting) => (
+                  <tr key={meeting.id} className="hover:bg-neutral-50/50 transition">
+                    <td className="py-3 font-bold text-neutral-800">{meeting.title}</td>
+                    <td className="py-3 text-neutral-600 font-semibold">
+                      {meeting.date} ({meeting.start} – {meeting.end})
+                    </td>
+                    <td className="py-3 text-neutral-500 font-semibold">{meeting.creator}</td>
+                    <td className="py-3 text-neutral-400 font-mono text-[10px]">
+                      {meeting.invitees.join(', ')}
+                    </td>
+                    <td className="py-3 text-right">
+                      {meeting.isOverride ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-50 border border-amber-200 text-amber-700 inline-flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          OVERRIDE
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-teal-50 border border-teal-150 text-teal-700 inline-flex items-center gap-1">
+                          ✓ COMPLIANT
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

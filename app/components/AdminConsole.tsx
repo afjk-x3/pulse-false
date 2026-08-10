@@ -229,13 +229,14 @@ export default function AdminConsole() {
                   <option value="UK Bank Holidays">UK Bank Holidays</option>
                   <option value="EU Standard">EU Standard Calendar</option>
                   <option value="APAC Standard">APAC Standard Calendar</option>
+                  <option value="PH Standard">PH Standard Calendar</option>
                 </select>
               </div>
 
               {/* k-anonymity floor */}
               <div>
                 <label htmlFor="floor-select" className="block text-xs font-bold text-neutral-700 mb-1">
-                  k-Anonymity Privacy Floor
+                  Minimum Team Privacy Threshold
                 </label>
                 <select
                   id="floor-select"
@@ -245,10 +246,10 @@ export default function AdminConsole() {
                     highContrast ? 'border-black' : 'border-neutral-200'
                   }`}
                 >
-                  <option value="5">k=5 (Standard recommendation)</option>
-                  <option value="8">k=8 (Stricter privacy rules)</option>
-                  <option value="10">k=10 (Highly conservative)</option>
-                  <option value="12">k=12 (Maximum security)</option>
+                  <option value="5">Minimum 5 team members required (Standard)</option>
+                  <option value="8">Minimum 8 team members required (Strict)</option>
+                  <option value="10">Minimum 10 team members required (Highly conservative)</option>
+                  <option value="12">Minimum 12 team members required (Maximum security)</option>
                 </select>
               </div>
             </div>

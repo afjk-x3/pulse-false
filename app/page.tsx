@@ -18,6 +18,7 @@ import ManagerDashboard from './components/ManagerDashboard';
 import AdminConsole from './components/AdminConsole';
 import CalendarGuard from './components/CalendarGuard';
 import BRIExplanationFeed from './components/BRIExplanationFeed';
+import SettingsView from './components/SettingsView';
 
 import { useAccessibility } from './context/AccessibilityContext';
 import {
@@ -41,6 +42,7 @@ export default function Home() {
   const [outboxCount, setOutboxCount] = useState(2);
   const [kudosCount, setKudosCount] = useState(3);
   const [sentimentCount, setSentimentCount] = useState(0);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -137,8 +139,39 @@ export default function Home() {
         return 'Manager Team Overview';
       case 'admin':
         return 'HR/IT Admin Console';
+      case 'settings':
+        return 'Profile Settings';
       default:
         return 'Pulse Guardian';
+    }
+  };
+
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    if (!emailInput || !passwordInput) {
+      setLoginError('Please enter both email and password.');
+      return;
+    }
+
+    const matched = loginAccounts.find(
+      (a) => a.email.toLowerCase() === emailInput.trim().toLowerCase() || a.username.toLowerCase() === emailInput.trim().toLowerCase()
+    );
+
+    if (matched) {
+      const savedPass = matched.password || 'password123';
+      if (savedPass === passwordInput) {
+        handleLogin(matched);
+      } else {
+        setLoginError('Incorrect password.');
+      }
+    } else {
+      setLoginError('No account found with this email or username.');
     }
   };
 
@@ -146,7 +179,7 @@ export default function Home() {
     return (
       <div className={`min-h-screen flex items-center justify-center p-6 bg-[#FAF9F6] selection:bg-teal-150 ${highContrast ? 'bg-white text-black' : ''
         }`}>
-        <div className="w-full max-w-4xl space-y-8 animate-scale-up">
+        <div className="w-full max-w-5xl space-y-8 animate-scale-up">
           <div className="text-center space-y-3.5">
             <div className="relative w-48 h-14 mx-auto select-none">
               <Image
@@ -162,83 +195,145 @@ export default function Home() {
                 Well-Being Guardian WBG Portal
               </h1>
               <p className="text-xs text-neutral-400 font-semibold max-w-md mx-auto leading-relaxed mt-1">
-                Enterprise workplace health telemetry, stress risk mitigation, and privacy compliance. Select a dedicated account to sign in:
+                Enterprise workplace health telemetry, stress risk mitigation, and privacy compliance.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {loginAccounts.map((account) => {
-              const isManager = account.role === 'manager';
-
-              let accentColor = 'border-teal-150 text-teal-700 bg-teal-50/50 hover:bg-teal-50';
-              let badgeText = 'Employee Telemetry';
-              let scopeList = [
-                'Local Computer Vision eye/posture tracking',
-                'Rolling sentiment SVG trend line charts',
-                'Peer Kudos Recognition feed',
-                'Pseudonymous chat support circles',
-                'Coffee Roulette social pairings'
-              ];
-
-              if (isManager) {
-                accentColor = 'border-blue-150 text-blue-700 bg-blue-50/50 hover:bg-blue-50';
-                badgeText = 'Team Analytics & Health';
-                scopeList = [
-                  'k-Anonymized aggregate workload charts',
-                  'Team Right-to-Disconnect adherence statistics',
-                  'Contextual 1:1 conversation starter icebreakers',
-                  'Pseudonymous forums moderation access'
-                ];
-              } else if (account.role === 'admin') {
-                accentColor = 'border-orange-150 text-orange-700 bg-orange-50/50 hover:bg-orange-50';
-                badgeText = 'IT Settings & Override';
-                scopeList = [
-                  'Configure standard working hours default',
-                  'Manage holiday calendars & org metrics',
-                  'Adjust k-anonymity privacy floors',
-                  'Emergency "System Paused" red kill switch'
-                ];
-              }
-
-              return (
-                <button
-                  key={account.username}
-                  onClick={() => handleLogin(account)}
-                  className={`p-6 text-left bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500 flex flex-col justify-between h-[360px] ${highContrast ? 'border-black hover:border-2 text-black' : 'border-[#f1f0ea]'
+          <div className="flex flex-col gap-8 items-center">
+            {/* Login Form (Centered) */}
+            <div className={`w-full max-w-md p-6 bg-white rounded-2xl border flex flex-col gap-4 ${
+              highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+            }`}>
+              <h2 className="text-sm font-bold text-neutral-800 uppercase tracking-wider">Sign In</h2>
+              
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="login-email" className="block text-xs font-bold text-neutral-700 mb-1">Email or Username</label>
+                  <input
+                    id="login-email"
+                    type="text"
+                    placeholder="e.g. alex.rivera@axionhr.com"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                      highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-neutral-100 flex items-center justify-center text-lg font-bold text-teal-700 border border-neutral-200 shrink-0">
-                        {account.avatar}
-                      </div>
-                      <div>
-                        <h2 className="text-sm font-bold text-neutral-800 leading-tight">{account.name}</h2>
-                        <span className="text-[10px] text-neutral-400 font-semibold">{account.title}</span>
-                      </div>
-                    </div>
+                    required
+                  />
+                </div>
 
-                    <span className={`px-2 py-0.5 border rounded text-[9px] font-bold uppercase tracking-wider inline-block ${accentColor}`}>
-                      {badgeText}
-                    </span>
+                <div>
+                  <label htmlFor="login-password" className="block text-xs font-bold text-neutral-700 mb-1">Password</label>
+                  <input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                      highContrast ? 'border-black' : 'border-neutral-200'
+                    }`}
+                    required
+                  />
+                </div>
 
-                    <ul className="text-[10px] text-neutral-500 space-y-1.5 list-disc pl-4 leading-normal">
-                      {scopeList.map((scope, idx) => (
-                        <li key={idx}>{scope}</li>
-                      ))}
-                    </ul>
+                {loginError && (
+                  <div className="p-2.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-750 font-semibold animate-fade-in">
+                    ⚠️ {loginError}
                   </div>
+                )}
 
-                  <div className={`w-full py-2 rounded-xl text-xs font-bold text-center border transition ${highContrast
+                <button
+                  type="submit"
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold text-center border transition ${
+                    highContrast
                       ? 'bg-black text-white hover:bg-neutral-800'
                       : 'bg-neutral-900 text-white hover:bg-neutral-800 shadow-xs'
-                    }`}>
-                    Sign In Account
-                  </div>
+                  }`}
+                >
+                  Sign In
                 </button>
-              );
-            })}
+              </form>
+            </div>
+
+            {/* Quick Sign-In (Temporary) Below */}
+            <div className="w-full max-w-4xl space-y-4 pt-4 border-t border-neutral-200/50">
+              <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider text-center">
+                Quick Sign-In Shortcuts (Temporary)
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {loginAccounts.map((account) => {
+                  const isManager = account.role === 'manager';
+
+                  let accentColor = 'border-teal-150 text-teal-700 bg-teal-50/50 hover:bg-teal-50';
+                  let badgeText = 'Employee Telemetry';
+                  let scopeList = [
+                    'Local Computer Vision eye/posture tracking',
+                    'Rolling sentiment SVG trend line charts',
+                    'Peer Kudos Recognition feed'
+                  ];
+
+                  if (isManager) {
+                    accentColor = 'border-blue-150 text-blue-700 bg-blue-50/50 hover:bg-blue-50';
+                    badgeText = 'Team Analytics';
+                    scopeList = [
+                      'k-Anonymized aggregate workload charts',
+                      'Right-to-Disconnect adherence statistics'
+                    ];
+                  } else if (account.role === 'admin') {
+                    accentColor = 'border-orange-150 text-orange-700 bg-orange-50/50 hover:bg-orange-50';
+                    badgeText = 'IT Settings & Override';
+                    scopeList = [
+                      'Adjust privacy floors & standard hours',
+                      'Emergency "System Paused" red kill switch'
+                    ];
+                  }
+
+                  return (
+                    <button
+                      key={account.username}
+                      onClick={() => handleFormSubmit({
+                        preventDefault: () => {},
+                      } as React.FormEvent)}
+                      // Allow direct log in by calling handleLogin directly
+                      onMouseDown={() => handleLogin(account)}
+                      className={`p-4 text-left bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500 flex flex-col justify-between h-[230px] ${highContrast ? 'border-black hover:border-2 text-black' : 'border-[#f1f0ea]'
+                        }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-9 w-9 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-teal-700 border border-neutral-200 shrink-0">
+                            {account.avatar}
+                          </div>
+                          <div>
+                            <h2 className="text-xs font-bold text-neutral-800 leading-tight">{account.name}</h2>
+                            <span className="text-[9px] text-neutral-400 font-semibold">{account.title}</span>
+                          </div>
+                        </div>
+
+                        <span className={`px-1.5 py-0.5 border rounded text-[8px] font-bold uppercase tracking-wider inline-block ${accentColor}`}>
+                          {badgeText}
+                        </span>
+
+                        <ul className="text-[9px] text-neutral-500 space-y-1 list-disc pl-3 leading-normal">
+                          {scopeList.map((scope, idx) => (
+                            <li key={idx}>{scope}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className={`w-full py-1.5 rounded-lg text-[10px] font-bold text-center border transition ${highContrast
+                          ? 'bg-black text-white hover:bg-neutral-800'
+                          : 'bg-neutral-900 text-white hover:bg-neutral-800 shadow-xs'
+                        }`}>
+                        Quick Sign In
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="text-center text-[10px] text-neutral-400 font-semibold max-w-sm mx-auto leading-relaxed pt-4">
@@ -248,6 +343,8 @@ export default function Home() {
       </div>
     );
   }
+
+
 
   return (
     <div className={`min-h-screen flex bg-[#FAF9F6] selection:bg-teal-150 ${highContrast ? 'bg-white text-black' : ''
@@ -260,10 +357,14 @@ export default function Home() {
         setIsOpen={setIsSidebarOpen}
         currentUser={currentUser}
         onLogout={handleLogout}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-h-screen lg:pl-72 relative">
+      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 ${
+        isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'
+      }`}>
         <Header
           title={getPageTitle()}
           currentUser={currentUser}
@@ -411,6 +512,12 @@ export default function Home() {
               <AdminConsole />
             </div>
           )}
+
+          {activeTab === 'settings' && (
+            <div className="animate-fade-in">
+              <SettingsView currentUser={currentUser} onUserUpdated={triggerRefresh} />
+            </div>
+          )}
         </main>
       </div>
 
@@ -423,6 +530,111 @@ export default function Home() {
           {/* Floating Micro-Coaching Nudge Overlay Bottom Left */}
           <MicroCoachingNudge />
         </>
+      )}
+
+      {/* First-Time Profile Setup Blocking Modal */}
+      {currentUser && !currentUser.phone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/60 backdrop-blur-md p-4">
+          <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-xl flex flex-col gap-4 ${
+            highContrast ? 'border-black text-black bg-white font-bold' : 'border-neutral-200'
+          }`}>
+            <div>
+              <h2 className="text-lg font-bold text-neutral-800">Complete Your Profile Setup</h2>
+              <p className="text-xs text-neutral-500 mt-1">First-time login setup: Please verify and fill out your required profile information to access the WBG portal.</p>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const pName = formData.get('name') as string;
+              const pPhone = formData.get('phone') as string;
+              const pAddress = formData.get('address') as string;
+              const pPass = formData.get('password') as string;
+              
+              if(pName && pPhone) {
+                PulseDB.updateUserAccount(currentUser.username, {
+                  name: pName.trim(),
+                  phone: pPhone.trim(),
+                  address: pAddress ? pAddress.trim() : undefined,
+                  password: pPass ? pPass.trim() : undefined
+                });
+                triggerRefresh();
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Full Name *</label>
+                <input
+                  name="name"
+                  type="text"
+                  defaultValue={currentUser.name}
+                  required
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                    highContrast ? 'border-black' : 'border-neutral-200'
+                  }`}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Work Email Address (Read-only)</label>
+                <input
+                  type="email"
+                  value={currentUser.email}
+                  disabled
+                  readOnly
+                  className="w-full p-2.5 rounded-lg border text-xs bg-neutral-50 text-neutral-500 border-neutral-200 cursor-not-allowed font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Phone Number *</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  placeholder="e.g. +1 (555) 019-2834"
+                  required
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                    highContrast ? 'border-black' : 'border-neutral-200'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Residential Address (Optional)</label>
+                <input
+                  name="address"
+                  type="text"
+                  placeholder="e.g. 123 Elm St, Springfield, IL"
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                    highContrast ? 'border-black' : 'border-neutral-200'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Update Password (Optional)</label>
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                    highContrast ? 'border-black' : 'border-neutral-200'
+                  }`}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  highContrast 
+                    ? 'bg-black text-white hover:bg-neutral-800' 
+                    : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                }`}
+              >
+                Access Portal
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

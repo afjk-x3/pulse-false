@@ -102,7 +102,7 @@ export default function KAnonymityEmptyState() {
             </h3>
             
             <p className="text-xs text-neutral-500 max-w-xs leading-normal">
-              AxionHR mandates a privacy threshold (k &ge; 5). A minimum of 5 team members must submit logs to display collective analytics.
+              Team insights are locked until at least 5 team members share their updates, keeping everyone's personal responses completely private.
             </p>
 
             <div className="mt-3.5 px-3 py-1.5 bg-neutral-50 rounded-lg border border-neutral-100 text-[10px] text-neutral-400 font-medium">
@@ -119,7 +119,7 @@ export default function KAnonymityEmptyState() {
         <div className="flex gap-2">
           <Info className="h-4.5 w-4.5 text-teal-600 shrink-0 mt-0.5" />
           <p>
-            <strong>k-Anonymity Compliance:</strong> To shield individuals from profile reconstruction by supervisors, group metrics remain strictly locked until the active cohort has sufficient aggregate answers.
+            <strong>Team Privacy Protection:</strong> To shield individuals from profile reconstruction by supervisors, group metrics remain strictly locked until the active cohort has sufficient aggregate answers.
           </p>
         </div>
       </div>

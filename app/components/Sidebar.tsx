@@ -11,12 +11,15 @@ import {
   X,
   Coffee,
   Sliders,
-  LogOut
+  LogOut,
+  Settings,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { UserAccount } from '../lib/db';
 
-export type TabType = 'dashboard' | 'kudos' | 'support' | 'privacy' | 'coffee' | 'manager' | 'admin';
+export type TabType = 'dashboard' | 'kudos' | 'support' | 'privacy' | 'coffee' | 'manager' | 'admin' | 'settings';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -25,9 +28,11 @@ interface SidebarProps {
   setIsOpen: (open: boolean) => void;
   currentUser: UserAccount;
   onLogout: () => void;
+  isCollapsed: boolean;
+  setIsCollapsed: (collapsed: boolean) => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, currentUser, onLogout }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, currentUser, onLogout, isCollapsed, setIsCollapsed }: SidebarProps) {
   const { highContrast } = useAccessibility();
   
   const fullItems = [
@@ -38,6 +43,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
     { id: 'support' as TabType, label: 'Support Circles', icon: Users, desc: 'Connect with support groups', roles: ['employee', 'manager'] },
     { id: 'coffee' as TabType, label: 'Coffee Roulette', icon: Coffee, desc: 'Social connector matches', roles: ['employee'] },
     { id: 'privacy' as TabType, label: 'Privacy Center', icon: Lock, desc: 'Data control and compliance', roles: ['employee', 'manager', 'admin'] },
+    { id: 'settings' as TabType, label: 'Settings', icon: Settings, desc: 'Manage your profile settings', roles: ['employee', 'manager', 'admin'] },
   ];
 
   const menuItems = fullItems.filter(item => item.roles.includes(currentUser.role));
@@ -71,27 +77,63 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
       {/* Main Sidebar Drawer */}
       <aside
         id="sidebar-navigation"
-        className={`fixed top-0 bottom-0 left-0 z-30 flex flex-col w-72 bg-white border-r transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-30 flex flex-col border-r transition-all duration-300 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${
+          isCollapsed ? 'w-20' : 'w-72'
         } ${
           highContrast 
             ? 'border-black bg-white text-black' 
-            : 'border-[#f1f0ea]'
+            : 'border-[#f1f0ea] bg-white'
         }`}
       >
         {/* Sidebar Logo Container */}
-        <div className={`p-6 border-b flex items-center justify-between ${
+        <div className={`p-4 border-b flex items-center justify-between ${
           highContrast ? 'border-black' : 'border-[#f1f0ea]'
         }`}>
-          <div className="relative w-48 h-12 flex items-center">
-            <Image 
-              src="/logo.svg" 
-              alt="Pulse: AxionHR logo" 
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+          {!isCollapsed ? (
+            <>
+              <div className="relative w-36 h-10 flex items-center select-none">
+                <Image 
+                  src="/logo.svg" 
+                  alt="Pulse: AxionHR logo" 
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <button
+                onClick={() => setIsCollapsed(true)}
+                className={`hidden lg:flex p-1.5 rounded-lg border hover:bg-neutral-50 text-neutral-500 transition-all ${
+                  highContrast ? 'border-black' : 'border-neutral-200'
+                }`}
+                aria-label="Collapse sidebar"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center w-full gap-2">
+              <div className="relative w-8 h-8 flex items-center select-none">
+                <Image 
+                  src="/logo-icon.svg" 
+                  alt="Pulse logo icon" 
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <button
+                onClick={() => setIsCollapsed(false)}
+                className={`hidden lg:flex p-1 rounded-lg border hover:bg-neutral-50 text-neutral-500 transition-all ${
+                  highContrast ? 'border-black' : 'border-neutral-200'
+                }`}
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           
           {/* Close button inside sidebar for mobile */}
           <button
@@ -104,7 +146,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
         </div>
 
         {/* Sidebar Navigation Menu Items */}
-        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 py-6 px-3 space-y-1.5 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -128,48 +170,60 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                   setActiveTab(item.id);
                   setIsOpen(false); // Close sidebar on mobile select
                 }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500 ${buttonStyles}`}
+                className={`w-full flex items-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  isCollapsed ? 'justify-center p-3 rounded-xl' : 'gap-3.5 px-4 py-3 rounded-lg text-left'
+                } ${buttonStyles}`}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={`${item.label} - ${item.desc}`}
+                title={isCollapsed ? item.label : undefined}
               >
                 <Icon className={`h-5 w-5 shrink-0 ${
                   isActive && !highContrast ? 'text-teal-600' : 'text-neutral-500'
                 } ${isActive && highContrast ? 'text-white' : ''}`} />
-                <div>
-                  <span className="block font-medium leading-none">{item.label}</span>
-                  <span className={`block text-[11px] mt-0.5 font-normal ${
-                    isActive 
-                      ? (highContrast ? 'text-neutral-200' : 'text-teal-700/80') 
-                      : 'text-neutral-400'
-                  }`}>{item.desc}</span>
-                </div>
+                {!isCollapsed && (
+                  <div>
+                    <span className="block font-medium leading-none">{item.label}</span>
+                    <span className={`block text-[11px] mt-0.5 font-normal ${
+                      isActive 
+                        ? (highContrast ? 'text-neutral-200' : 'text-teal-700/80') 
+                        : 'text-neutral-400'
+                    }`}>{item.desc}</span>
+                  </div>
+                )}
               </button>
             );
           })}
         </nav>
 
         {/* Sidebar Footer Section */}
-        <div className={`p-5 border-t text-[11px] text-neutral-400 font-medium space-y-3.5 ${
+        <div className={`p-4 border-t text-[11px] text-neutral-400 font-medium space-y-3.5 ${
           highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
         }`}>
           {/* Sign Out Button */}
           <button
             onClick={onLogout}
-            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+            className={`w-full py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 ${
+              isCollapsed ? 'px-0' : 'px-4 gap-2'
+            } ${
               highContrast
                 ? 'border-black hover:bg-black hover:text-white text-black bg-white'
                 : 'border-neutral-250 hover:bg-neutral-50 text-neutral-600'
             }`}
+            title="Sign Out"
           >
-            <LogOut className="h-4 w-4 text-neutral-500" />
-            <span>Sign Out Account</span>
+            <LogOut className="h-4 w-4 text-neutral-500 animate-pulse-slow" />
+            {!isCollapsed && <span>Sign Out Account</span>}
           </button>
 
-          <div className="flex items-center justify-between">
-            <span>AxionHR WBG v1.0.0</span>
-            <span className="px-1.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-100 rounded text-[9px] font-bold">PWA ACTIVE</span>
-          </div>
-          <p className="leading-tight">k-Anonymity compliance guard: Enabled (Threshold: 5 responses)</p>
+          {!isCollapsed && (
+            <>
+              <div className="flex items-center justify-between">
+                <span>AxionHR WBG v1.0.0</span>
+                <span className="px-1.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-100 rounded text-[9px] font-bold">PWA ACTIVE</span>
+              </div>
+              <p className="leading-tight">Team Privacy Protection: Enabled</p>
+            </>
+          )}
         </div>
       </aside>
     </>
