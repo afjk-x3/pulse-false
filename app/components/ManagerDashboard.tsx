@@ -2,96 +2,178 @@
 
 import React, { useState, useEffect } from 'react';
 import { Users, EyeOff, ArrowRight, ShieldCheck, UserCheck, Plus, ShieldAlert, TrendingUp, Calendar, AlertTriangle } from 'lucide-react';
-import { PulseDB, UserAccount, ScheduledMeeting } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+type ScheduledMeeting = Database['public']['Tables']['scheduled_meetings']['Row'];
+
+// Shape of BRI data shared from an employee who opted in
+interface SharedBRITrend {
+  name: string;
+  avatar: string;
+  data: number[]; // array of scores (1-3) for sparkline
+}
+
+// k-anonymity floor loaded from admin_configs
+const DEFAULT_KANON_FLOOR = 5;
 
 export default function ManagerDashboard() {
   const { highContrast } = useAccessibility();
-  
-  // Local states
+
+  // k-anonymity
   const [responseCount, setResponseCount] = useState(3);
-  const [kanonFloor, setKanonFloor] = useState(5);
+  const [kanonFloor, setKanonFloor] = useState(DEFAULT_KANON_FLOOR);
 
   // Onboarding states
-  const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  const [accounts, setAccounts] = useState<UserProfile[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [newName, setNewName] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isProvisioning, setIsProvisioning] = useState(false);
   const [provisionSuccess, setProvisionSuccess] = useState(false);
 
-  // Shared trends
-  const [sharedTrends, setSharedTrends] = useState<{ name: string; avatar: string; data: number[] }[]>([]);
+  // Shared BRI trends
+  const [sharedTrends, setSharedTrends] = useState<SharedBRITrend[]>([]);
+
+  // Meetings
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
+  const [isLoadingMeetings, setIsLoadingMeetings] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const config = PulseDB.getAdminConfig();
-      setKanonFloor(config.kanonymityFloor);
-      setAccounts(PulseDB.getUserAccounts());
+    const fetchData = async () => {
+      setIsLoadingAccounts(true);
+      setIsLoadingMeetings(true);
+      try {
+        // Fetch admin config for k-anonymity floor
+        const { data: adminCfg } = await supabase
+          .from('admin_configs')
+          .select('privacy_floor')
+          .single();
+        if (adminCfg) setKanonFloor(adminCfg.privacy_floor);
 
-      // Check if any employee has shared their BRI
-      const isShared = localStorage.getItem('pulse-bri-share-manager') === 'true';
-      if (isShared) {
-        const riskData = PulseDB.getBurnoutRiskIndex();
-        // Only show for Alex (the employee who can toggle share)
-        const scores = riskData.map((d: { score: number }) => d.score);
-        setSharedTrends([{ name: 'Alex Rivera', avatar: 'AR', data: scores }]);
-      } else {
-        setSharedTrends([]);
+        // Fetch active employee directory
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('status', 'active')
+          .order('full_name', { ascending: true });
+        setAccounts(profiles ?? []);
+
+        // Fetch employees who have opted to share their BRI trend with manager
+        const { data: sharedProfiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, avatar')
+          .eq('share_bri_with_manager', true)
+          .eq('status', 'active');
+
+        if (sharedProfiles && sharedProfiles.length > 0) {
+          // For each sharing employee, fetch their last 7 BRI shifts
+          const trendsPromises = sharedProfiles.map(async (profile) => {
+            const { data: shifts } = await supabase
+              .from('bri_shift_records')
+              .select('new_band')
+              .eq('user_id', profile.id)
+              .order('created_at', { ascending: false })
+              .limit(7);
+
+            const bandToScore = (band: string): number => {
+              if (band === 'Low') return 1;
+              if (band === 'Moderate') return 2;
+              return 3;
+            };
+
+            const scores = (shifts ?? []).reverse().map(s => bandToScore(s.new_band));
+            // Pad to 7 with score 1 if insufficient data
+            while (scores.length < 7) scores.unshift(1);
+
+            return {
+              name: profile.full_name,
+              avatar: profile.avatar ?? profile.full_name.substring(0, 2).toUpperCase(),
+              data: scores,
+            };
+          });
+
+          setSharedTrends(await Promise.all(trendsPromises));
+        } else {
+          setSharedTrends([]);
+        }
+
+        // Fetch scheduled meetings for the team audit table
+        const { data: meetings } = await supabase
+          .from('scheduled_meetings')
+          .select('*')
+          .order('start_time', { ascending: false })
+          .limit(50);
+        setScheduledMeetings(meetings ?? []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingAccounts(false);
+        setIsLoadingMeetings(false);
       }
-      // Load scheduled meetings
-      setScheduledMeetings(PulseDB.getScheduledMeetings());
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    };
 
-  const handleProvision = (e: React.FormEvent) => {
+    fetchData();
+  }, [provisionSuccess]);
+
+  const handleProvision = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setProvisionSuccess(false);
 
-    if (!newName || !newTitle || !newEmail || !newUsername) {
-      setErrorMessage('All fields are required.');
+    if (!newName || !newTitle || !newEmail) {
+      setErrorMessage('Full Name, Job Title, and Work Email are required.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setErrorMessage('A temporary password of at least 8 characters is required.');
       return;
     }
 
-    const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
-    if (!usernameRegex.test(newUsername)) {
-      setErrorMessage('Username contains invalid characters. Use alphanumeric, dot, dash, or underscore.');
-      return;
+    setIsProvisioning(true);
+    try {
+      // Create the Supabase Auth user (email + password)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newEmail.trim(),
+        password: newPassword.trim(),
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('User creation failed — no user returned.');
+
+      const parts = newName.trim().split(' ');
+      const initials = parts.map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'EM';
+
+      // Insert the matching user_profile row
+      const { error: profileError } = await supabase.from('user_profiles').insert({
+        id: authData.user.id,
+        full_name: newName.trim(),
+        email: newEmail.trim(),
+        job_title: newTitle.trim(),
+        avatar: initials,
+        role: 'employee',
+        status: 'active',
+      });
+
+      if (profileError) throw profileError;
+
+      setProvisionSuccess(true);
+      setNewName('');
+      setNewTitle('');
+      setNewEmail('');
+      setNewPassword('');
+      setTimeout(() => setProvisionSuccess(false), 4000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Provisioning failed. Please try again.';
+      setErrorMessage(message);
+    } finally {
+      setIsProvisioning(false);
     }
-
-    const parts = newName.trim().split(' ');
-    const initials = parts.map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'EM';
-
-    const newAccount: UserAccount = {
-      username: newUsername.trim().toLowerCase(),
-      name: newName.trim(),
-      role: 'employee',
-      roleName: 'Employee',
-      avatar: initials,
-      title: newTitle.trim(),
-      email: newEmail.trim(),
-      password: newPassword.trim() || undefined
-    };
-
-    const added = PulseDB.addUserAccount(newAccount);
-    if (!added) {
-      setErrorMessage('Username is already taken by another account.');
-      return;
-    }
-
-    setProvisionSuccess(true);
-    setAccounts(PulseDB.getUserAccounts());
-    setNewName('');
-    setNewTitle('');
-    setNewEmail('');
-    setNewUsername('');
-    setNewPassword('');
-    setTimeout(() => setProvisionSuccess(false), 4000);
   };
 
   const prompts = [
@@ -99,6 +181,10 @@ export default function ManagerDashboard() {
     { text: "Burnout indicators suggest elevated screen times. Try starting meetings with a 2-minute posture check.", tag: "Health Habits" },
     { text: "Kudos activity is high! Commend the team for strong peer appreciation in your next sync.", tag: "Recognition" },
   ];
+
+  // Helper to format ISO meeting time for display
+  const toDateTimeStr = (iso: string) =>
+    new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
     <div className="space-y-6">
@@ -156,12 +242,12 @@ export default function ManagerDashboard() {
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">
               Team Burnout Risk Index (Weekly Average)
             </span>
-            
+
             {/* Chart area */}
             <div className={`h-48 w-full flex items-end justify-between px-4 pb-4 border-b border-neutral-100 transition-all duration-500 ${
               responseCount < kanonFloor ? 'blur-md pointer-events-none select-none opacity-40' : 'blur-none opacity-100'
             }`}>
-              {/* Simulated bars */}
+              {/* Simulated aggregate bars — never individual data */}
               {[
                 { date: 'Mon', val: 38 },
                 { date: 'Tue', val: 42 },
@@ -180,7 +266,7 @@ export default function ManagerDashboard() {
 
             {/* k-Anonymity overlay */}
             {responseCount < kanonFloor && (
-              <div 
+              <div
                 className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md bg-white/70 animate-fade-in"
                 role="alert"
               >
@@ -260,7 +346,7 @@ export default function ManagerDashboard() {
             </span>
 
             <p className="text-xs text-neutral-500 leading-relaxed">
-              Create a new secure employee profile. Once provisioned, the user is immediately added to the system and can select their account on the login portal.
+              Create a new secure employee profile. Once provisioned, the user is immediately added to the system and can log in with their credentials.
             </p>
 
             <div className="space-y-3 pt-2">
@@ -275,11 +361,7 @@ export default function ManagerDashboard() {
                   required
                   placeholder="e.g. Sarah Connor"
                   value={newName}
-                  onChange={(e) => {
-                    setNewName(e.target.value);
-                    const suggested = e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    setNewUsername(suggested);
-                  }}
+                  onChange={(e) => setNewName(e.target.value)}
                   className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
                     highContrast ? 'border-black' : 'border-neutral-200'
                   }`}
@@ -322,32 +404,15 @@ export default function ManagerDashboard() {
                 />
               </div>
 
-              {/* Username */}
-              <div>
-                <label htmlFor="provision-username" className="block text-[10px] font-bold text-neutral-700 mb-1">
-                  Unique Username (System Login)
-                </label>
-                <input
-                  id="provision-username"
-                  type="text"
-                  required
-                  placeholder="e.g. sarah"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
-                />
-              </div>
-
               {/* Temporary Password */}
               <div>
                 <label htmlFor="provision-password" className="block text-[10px] font-bold text-neutral-700 mb-1">
-                  Temporary Password (Optional)
+                  Temporary Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="provision-password"
                   type="text"
+                  required
                   placeholder="e.g. Welcome123!"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -375,14 +440,15 @@ export default function ManagerDashboard() {
 
             <button
               type="submit"
-              className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all mt-4 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+              disabled={isProvisioning}
+              className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all mt-4 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${
                 highContrast
                   ? 'bg-black text-white hover:bg-neutral-800'
                   : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
               }`}
             >
               <Plus className="h-4.5 w-4.5" />
-              <span>Provision Profile</span>
+              <span>{isProvisioning ? 'Provisioning...' : 'Provision Profile'}</span>
             </button>
           </form>
         </div>
@@ -396,50 +462,58 @@ export default function ManagerDashboard() {
               Active Employee Directory
             </span>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-neutral-100 text-neutral-400 font-semibold">
-                    <th className="py-2.5">Avatar</th>
-                    <th className="py-2.5">Name</th>
-                    <th className="py-2.5">Job Title</th>
-                    <th className="py-2.5">Email</th>
-                    <th className="py-2.5">Username</th>
-                    <th className="py-2.5 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-50">
-                  {accounts.map((user) => (
-                    <tr key={user.username} className="hover:bg-neutral-50/50 transition">
-                      <td className="py-3">
-                        <div className="h-7 w-7 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center font-bold text-[10px]">
-                          {user.avatar}
-                        </div>
-                      </td>
-                      <td className="py-3 font-bold text-neutral-800">{user.name}</td>
-                      <td className="py-3 text-neutral-500 font-semibold">{user.title}</td>
-                      <td className="py-3 text-neutral-400 font-semibold">{user.email}</td>
-                      <td className="py-3 text-teal-600 font-extrabold font-mono">{user.username}</td>
-                      <td className="py-3 text-right">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                          user.role === 'admin'
-                            ? 'bg-neutral-100 text-neutral-600'
-                            : user.role === 'manager'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-teal-50 text-teal-700'
-                        }`}>
-                          {user.roleName}
-                        </span>
-                      </td>
+            {isLoadingAccounts ? (
+              <div className="py-8 flex items-center justify-center">
+                <div className="flex gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-neutral-100 text-neutral-400 font-semibold">
+                      <th className="py-2.5">Avatar</th>
+                      <th className="py-2.5">Name</th>
+                      <th className="py-2.5">Job Title</th>
+                      <th className="py-2.5">Email</th>
+                      <th className="py-2.5 text-right">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {accounts.map((user) => (
+                      <tr key={user.id} className="hover:bg-neutral-50/50 transition">
+                        <td className="py-3">
+                          <div className="h-7 w-7 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center font-bold text-[10px]">
+                            {user.avatar ?? user.full_name.substring(0, 2).toUpperCase()}
+                          </div>
+                        </td>
+                        <td className="py-3 font-bold text-neutral-800">{user.full_name}</td>
+                        <td className="py-3 text-neutral-500 font-semibold">{user.job_title ?? '—'}</td>
+                        <td className="py-3 text-neutral-400 font-semibold">{user.email}</td>
+                        <td className="py-3 text-right">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                            user.role === 'admin'
+                              ? 'bg-neutral-100 text-neutral-600'
+                              : user.role === 'manager'
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-teal-50 text-teal-700'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="text-[10px] text-neutral-400 border-t pt-3.5 mt-4">
-            Total active directories: <strong>{accounts.length} accounts</strong>. Provisioning acts locally and updates live directory listings.
+            Total active directories: <strong>{accounts.length} accounts</strong>. Provisioning creates a Supabase Auth user and a linked profile row.
           </div>
         </div>
       </div>
@@ -454,7 +528,7 @@ export default function ManagerDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {prompts.map((p, idx) => (
-            <div 
+            <div
               key={idx}
               className={`p-4 rounded-xl border bg-neutral-50/40 text-xs flex flex-col justify-between gap-3 hover:bg-neutral-50 transition ${
                 highContrast ? 'border-black' : 'border-neutral-100'
@@ -477,6 +551,7 @@ export default function ManagerDashboard() {
           ))}
         </div>
       </div>
+
       {/* ===== Direct Reports — Shared BRI Trends ===== */}
       <div className={`p-6 bg-white rounded-2xl border ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
         <div className="flex items-center gap-2 border-b pb-3 mb-5 border-neutral-100">
@@ -554,7 +629,15 @@ export default function ManagerDashboard() {
           <h3 className="text-base font-bold text-neutral-800">Team Scheduled Meetings (Calendar Guard Adherence)</h3>
         </div>
 
-        {scheduledMeetings.length === 0 ? (
+        {isLoadingMeetings ? (
+          <div className="py-8 flex items-center justify-center">
+            <div className="flex gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        ) : scheduledMeetings.length === 0 ? (
           <div className="py-8 text-center space-y-2">
             <p className="text-xs font-semibold text-neutral-500">No scheduled meetings logged yet.</p>
             <p className="text-[10px] text-neutral-400 max-w-sm mx-auto">When team members schedule meetings using Calendar Guard, they will appear here. Overrides will be flagged for review.</p>
@@ -565,9 +648,8 @@ export default function ManagerDashboard() {
               <thead>
                 <tr className="border-b border-neutral-100 text-neutral-400 font-semibold">
                   <th className="py-2">Meeting Title</th>
-                  <th className="py-2">Date & Time</th>
-                  <th className="py-2">Organized By</th>
-                  <th className="py-2">Invitees</th>
+                  <th className="py-2">Date &amp; Time</th>
+                  <th className="py-2">Attendees</th>
                   <th className="py-2 text-right">Right-to-Disconnect Status</th>
                 </tr>
               </thead>
@@ -576,14 +658,13 @@ export default function ManagerDashboard() {
                   <tr key={meeting.id} className="hover:bg-neutral-50/50 transition">
                     <td className="py-3 font-bold text-neutral-800">{meeting.title}</td>
                     <td className="py-3 text-neutral-600 font-semibold">
-                      {meeting.date} ({meeting.start} – {meeting.end})
+                      {toDateTimeStr(meeting.start_time)} – {new Date(meeting.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </td>
-                    <td className="py-3 text-neutral-500 font-semibold">{meeting.creator}</td>
                     <td className="py-3 text-neutral-400 font-mono text-[10px]">
-                      {meeting.invitees.join(', ')}
+                      {Array.isArray(meeting.attendees) ? (meeting.attendees as string[]).length : 0} attendee(s)
                     </td>
                     <td className="py-3 text-right">
-                      {meeting.isOverride ? (
+                      {!meeting.is_compliant ? (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-50 border border-amber-200 text-amber-700 inline-flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
                           OVERRIDE

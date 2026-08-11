@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 type FontScale = 'normal' | 'large' | 'extra-large';
 
@@ -37,14 +38,51 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
   const [ttsPitch, setTtsPitch] = useState(1.0);
   const [nudgeStyle, setNudgeStyle] = useState<'toast' | 'glow' | 'push' | 'off'>('toast');
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Load from localStorage on mount
+  // Auth listener & sync from Supabase
+  useEffect(() => {
+    const fetchUserPrefs = async (uid: string) => {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dyslexic_font_enabled, reading_ruler_enabled, high_contrast_enabled')
+        .eq('id', uid)
+        .single();
+      
+      if (!error && data) {
+        setOpenDyslexic(data.dyslexic_font_enabled);
+        setReadingRuler(data.reading_ruler_enabled);
+        setHighContrast(data.high_contrast_enabled);
+      }
+    };
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        fetchUserPrefs(session.user.id);
+      }
+    });
+
+    // Listen for login/logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        fetchUserPrefs(session.user.id);
+      } else {
+        setUserId(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Load remaining local-only prefs from localStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const savedDyslexic = localStorage.getItem('pulse-dyslexic') === 'true';
-      const savedRuler = localStorage.getItem('pulse-ruler') === 'true';
-      const savedContrast = localStorage.getItem('pulse-contrast') === 'true';
       const savedScale = localStorage.getItem('pulse-font-scale') as FontScale;
       const savedTts = localStorage.getItem('pulse-tts-enabled') === 'true';
       const savedTtsSpeed = Number(localStorage.getItem('pulse-tts-speed') || '1.0');
@@ -52,9 +90,6 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
       const savedNudgeStyle = (localStorage.getItem('pulse-nudge-style') || 'toast') as 'toast' | 'glow' | 'push' | 'off';
 
       setTimeout(() => {
-        setOpenDyslexic(savedDyslexic);
-        setReadingRuler(savedRuler);
-        setHighContrast(savedContrast);
         if (savedScale && ['normal', 'large', 'extra-large'].includes(savedScale)) {
           setFontScale(savedScale);
         }
@@ -62,13 +97,32 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
         setTtsSpeed(savedTtsSpeed);
         setTtsPitch(savedTtsPitch);
         setNudgeStyle(savedNudgeStyle);
+        
+        // Only load these from local if not logged in (to prevent overwriting DB values on fast reloads)
+        if (!userId) {
+          const savedDyslexic = localStorage.getItem('pulse-dyslexic') === 'true';
+          const savedRuler = localStorage.getItem('pulse-ruler') === 'true';
+          const savedContrast = localStorage.getItem('pulse-contrast') === 'true';
+          setOpenDyslexic(savedDyslexic);
+          setReadingRuler(savedRuler);
+          setHighContrast(savedContrast);
+        }
       }, 0);
     } catch (e) {
       console.error('Failed to load accessibility preferences:', e);
     }
-  }, []);
+  }, [userId]);
 
-  // Sync to localStorage and body classes
+  // Sync to localStorage/Supabase and body classes
+  const updateProfilePref = async (key: string, value: boolean) => {
+    if (!userId) return;
+    try {
+      await supabase.from('user_profiles').update({ [key]: value } as any).eq('id', userId);
+    } catch (e) {
+      console.error(`Failed to sync ${key} to Supabase:`, e);
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('pulse-dyslexic', String(openDyslexic));
     if (openDyslexic) {
@@ -90,6 +144,22 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
       document.body.classList.remove('high-contrast');
     }
   }, [highContrast]);
+
+  // Wrappers to update state and DB simultaneously
+  const handleSetOpenDyslexic = (val: boolean) => {
+    setOpenDyslexic(val);
+    updateProfilePref('dyslexic_font_enabled', val);
+  };
+
+  const handleSetReadingRuler = (val: boolean) => {
+    setReadingRuler(val);
+    updateProfilePref('reading_ruler_enabled', val);
+  };
+
+  const handleSetHighContrast = (val: boolean) => {
+    setHighContrast(val);
+    updateProfilePref('high_contrast_enabled', val);
+  };
 
   useEffect(() => {
     localStorage.setItem('pulse-font-scale', fontScale);
@@ -177,12 +247,12 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     <AccessibilityContext.Provider
       value={{
         openDyslexic,
-        setOpenDyslexic,
+        setOpenDyslexic: handleSetOpenDyslexic,
         readingRuler,
-        setReadingRuler,
+        setReadingRuler: handleSetReadingRuler,
         readingRulerY,
         highContrast,
-        setHighContrast,
+        setHighContrast: handleSetHighContrast,
         fontScale,
         setFontScale,
         ttsEnabled,

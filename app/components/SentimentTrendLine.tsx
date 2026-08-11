@@ -1,42 +1,82 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PulseDB, SentimentRecord } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { TrendingUp, Info } from 'lucide-react';
+
+type MoodLog = Database['public']['Tables']['mood_logs']['Row'];
+
+// Local display shape — enriches MoodLog with a formatted day label
+type MoodLogDisplay = MoodLog & { dayLabel: string };
 
 interface SentimentTrendLineProps {
   refreshTrigger: number;
 }
 
+// Static mock records shown when the user has fewer than 5 real logs
+const MOCK_HISTORICAL: MoodLogDisplay[] = [
+  { id: 'm-h1', user_id: '', dayLabel: 'Mon', mood_score: 4, energy_level: null, created_at: new Date(Date.now() - 3600000 * 24 * 6).toISOString() },
+  { id: 'm-h2', user_id: '', dayLabel: 'Tue', mood_score: 3, energy_level: null, created_at: new Date(Date.now() - 3600000 * 24 * 5).toISOString() },
+  { id: 'm-h3', user_id: '', dayLabel: 'Wed', mood_score: 5, energy_level: null, created_at: new Date(Date.now() - 3600000 * 24 * 4).toISOString() },
+  { id: 'm-h4', user_id: '', dayLabel: 'Thu', mood_score: 2, energy_level: null, created_at: new Date(Date.now() - 3600000 * 24 * 3).toISOString() },
+  { id: 'm-h5', user_id: '', dayLabel: 'Fri', mood_score: 4, energy_level: null, created_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString() },
+  { id: 'm-h6', user_id: '', dayLabel: 'Sat', mood_score: 4, energy_level: null, created_at: new Date(Date.now() - 3600000 * 24 * 1).toISOString() },
+];
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLineProps) {
   const { highContrast } = useAccessibility();
-  const [logs, setLogs] = useState<SentimentRecord[]>([]);
+  const [logs, setLogs] = useState<MoodLogDisplay[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{ index: number; score: number; label: string } | null>(null);
 
   useEffect(() => {
-    // Fetch sentiment logs
-    let rawLogs = PulseDB.getSentimentLogs();
-    
-    // Seed initial mock records if log history is thin, to display a beautiful trend
-    if (rawLogs.length < 5) {
-      const mockHistorical: SentimentRecord[] = [
-        { id: 'm-h1', date: 'Mon', score: 4, emoji: '🙂', timestamp: Date.now() - 3600000 * 24 * 6 },
-        { id: 'm-h2', date: 'Tue', score: 3, emoji: '😐', timestamp: Date.now() - 3600000 * 24 * 5 },
-        { id: 'm-h3', date: 'Wed', score: 5, emoji: '😄', timestamp: Date.now() - 3600000 * 24 * 4 },
-        { id: 'm-h4', date: 'Thu', score: 2, emoji: '😕', timestamp: Date.now() - 3600000 * 24 * 3 },
-        { id: 'm-h5', date: 'Fri', score: 4, emoji: '🙂', timestamp: Date.now() - 3600000 * 24 * 2 },
-        { id: 'm-h6', date: 'Sat', score: 4, emoji: '🙂', timestamp: Date.now() - 3600000 * 24 * 1 },
-      ];
-      // Combine mock historical and current logs
-      rawLogs = [...mockHistorical, ...rawLogs];
-    }
-    
-    // Keep only the last 7 entries for rolling view
-    const timer = setTimeout(() => {
-      setLogs(rawLogs.slice(-7));
-    }, 0);
-    return () => clearTimeout(timer);
+    const fetchLogs = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLogs(MOCK_HISTORICAL.slice(-7));
+          return;
+        }
+
+        const { data, error: fetchError } = await supabase
+          .from('mood_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(7);
+
+        if (fetchError) throw fetchError;
+
+        // Enrich with a day label for the X axis
+        let realLogs: MoodLogDisplay[] = (data ?? [])
+          .reverse()
+          .map((log) => ({
+            ...log,
+            dayLabel: DAY_LABELS[new Date(log.created_at).getDay()],
+          }));
+
+        // Seed with mock historical data when fewer than 5 real logs exist
+        if (realLogs.length < 5) {
+          realLogs = [...MOCK_HISTORICAL, ...realLogs];
+        }
+
+        setLogs(realLogs.slice(-7));
+      } catch (err) {
+        setError('Could not load sentiment history.');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLogs();
   }, [refreshTrigger]);
 
   // SVG Chart Dimensions
@@ -50,7 +90,6 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
 
   // Map 1-5 scores to Y coordinates (inverted since SVG 0 is top)
   const getY = (score: number) => {
-    // Score ranges 1 to 5. Map 5 to top (paddingY), 1 to bottom (height - paddingY)
     const ratio = (score - 1) / 4;
     return height - paddingY - ratio * chartHeight;
   };
@@ -66,7 +105,7 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
     if (logs.length === 0) return '';
     return logs.map((log, idx) => {
       const x = getX(idx, logs.length);
-      const y = getY(log.score);
+      const y = getY(log.mood_score);
       return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
   };
@@ -90,7 +129,7 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
   };
 
   return (
-    <article 
+    <article
       className={`p-6 bg-white rounded-2xl border focus-dimming-card shadow-xs ${
         highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
       }`}
@@ -108,7 +147,19 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
         </span>
       </div>
 
-      {logs.length === 0 ? (
+      {isLoading ? (
+        <div className="h-44 flex items-center justify-center">
+          <div className="flex gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      ) : error ? (
+        <div className="h-44 flex items-center justify-center text-xs text-red-500">
+          {error}
+        </div>
+      ) : logs.length === 0 ? (
         <div className="h-44 flex items-center justify-center text-xs text-neutral-400">
           No sentiment history available.
         </div>
@@ -120,19 +171,19 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
               const y = getY(score);
               return (
                 <g key={score}>
-                  <line 
-                    x1={paddingX} 
-                    y1={y} 
-                    x2={width - paddingX} 
-                    y2={y} 
-                    stroke={highContrast ? '#000' : '#f1f0ea'} 
+                  <line
+                    x1={paddingX}
+                    y1={y}
+                    x2={width - paddingX}
+                    y2={y}
+                    stroke={highContrast ? '#000' : '#f1f0ea'}
                     strokeWidth={1}
                     strokeDasharray={score === 3 ? '0' : '4 4'}
                   />
-                  <text 
-                    x={paddingX - 10} 
-                    y={y + 4} 
-                    textAnchor="end" 
+                  <text
+                    x={paddingX - 10}
+                    y={y + 4}
+                    textAnchor="end"
                     className="text-[9px] font-bold text-neutral-400 fill-current"
                   >
                     {score}
@@ -143,18 +194,18 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
 
             {/* Shaded Area underneath */}
             {!highContrast && (
-              <path 
-                d={getAreaPath()} 
-                fill="url(#sentiment-gradient)" 
+              <path
+                d={getAreaPath()}
+                fill="url(#sentiment-gradient)"
                 className="opacity-40"
               />
             )}
 
             {/* Line Path */}
-            <path 
-              d={getLinePath()} 
-              fill="none" 
-              stroke={highContrast ? '#000' : '#0d9488'} 
+            <path
+              d={getLinePath()}
+              fill="none"
+              stroke={highContrast ? '#000' : '#0d9488'}
               strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -163,7 +214,7 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
             {/* Data nodes */}
             {logs.map((log, idx) => {
               const x = getX(idx, logs.length);
-              const y = getY(log.score);
+              const y = getY(log.mood_score);
               const isHovered = hoveredPoint?.index === idx;
 
               return (
@@ -175,20 +226,20 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
                     r={12}
                     fill="transparent"
                     className="cursor-pointer"
-                    onMouseEnter={() => setHoveredPoint({ index: idx, score: log.score, label: log.date })}
+                    onMouseEnter={() => setHoveredPoint({ index: idx, score: log.mood_score, label: log.dayLabel })}
                     onMouseLeave={() => setHoveredPoint(null)}
                     tabIndex={0}
-                    onFocus={() => setHoveredPoint({ index: idx, score: log.score, label: log.date })}
+                    onFocus={() => setHoveredPoint({ index: idx, score: log.mood_score, label: log.dayLabel })}
                     onBlur={() => setHoveredPoint(null)}
-                    aria-label={`Log ${idx + 1}: score ${log.score} (${getMoodLabel(log.score)}) on ${log.date}`}
+                    aria-label={`Log ${idx + 1}: score ${log.mood_score} (${getMoodLabel(log.mood_score)}) on ${log.dayLabel}`}
                   />
                   {/* Core data node */}
-                  <circle 
-                    cx={x} 
-                    cy={y} 
-                    r={isHovered ? 6 : 4} 
-                    fill={isHovered ? (highContrast ? '#000' : '#0f766e') : (highContrast ? '#fff' : '#0d9488')} 
-                    stroke={highContrast ? '#000' : '#ffffff'} 
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={isHovered ? 6 : 4}
+                    fill={isHovered ? (highContrast ? '#000' : '#0f766e') : (highContrast ? '#fff' : '#0d9488')}
+                    stroke={highContrast ? '#000' : '#ffffff'}
                     strokeWidth={1.5}
                     className="pointer-events-none transition-all duration-150"
                   />
@@ -200,14 +251,14 @@ export default function SentimentTrendLine({ refreshTrigger }: SentimentTrendLin
             {logs.map((log, idx) => {
               const x = getX(idx, logs.length);
               return (
-                <text 
-                  key={log.id} 
-                  x={x} 
-                  y={height - 6} 
-                  textAnchor="middle" 
+                <text
+                  key={log.id}
+                  x={x}
+                  y={height - 6}
+                  textAnchor="middle"
                   className="text-[9px] font-bold text-neutral-400 fill-current"
                 >
-                  {log.date}
+                  {log.dayLabel}
                 </text>
               );
             })}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar, { TabType } from './components/Sidebar';
 import Header from './components/Header';
 import SentimentWidget from './components/SentimentWidget';
@@ -21,86 +21,166 @@ import BRIExplanationFeed from './components/BRIExplanationFeed';
 import SettingsView from './components/SettingsView';
 
 import { useAccessibility } from './context/AccessibilityContext';
-import {
-  Heart,
-  ThumbsUp,
-  Inbox
-} from 'lucide-react';
-import { PulseDB, UserAccount } from './lib/db';
+import { Heart, ThumbsUp, Inbox } from 'lucide-react';
 import Image from 'next/image';
+import { supabase } from './lib/supabaseClient';
 
 export default function Home() {
   const { highContrast } = useAccessibility();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
-  const [loginAccounts, setLoginAccounts] = useState<UserAccount[]>([]);
+  
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
+  const [loginAccounts, setLoginAccounts] = useState<any[]>([]);
   const [systemPaused, setSystemPaused] = useState(false);
+  
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Quick stats states
-  const [outboxCount, setOutboxCount] = useState(2);
-  const [kudosCount, setKudosCount] = useState(3);
+  const [outboxCount, setOutboxCount] = useState(0);
+  const [kudosCount, setKudosCount] = useState(0);
   const [sentimentCount, setSentimentCount] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const triggerRefresh = () => {
+  const triggerRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
-  // Sync user directories on mount & refresh triggers
+  // Sync auth state
   useEffect(() => {
-    const accountsList = PulseDB.getUserAccounts();
-    const savedUsername = localStorage.getItem('pulse-current-user');
-
-    const timer = setTimeout(() => {
-      setLoginAccounts(accountsList);
-      if (savedUsername) {
-        const matched = accountsList.find(a => a.username === savedUsername);
-        if (matched) {
-          setCurrentUser(matched);
-          if (matched.role === 'employee') setActiveTab('dashboard');
-          else if (matched.role === 'manager') setActiveTab('manager');
-          else if (matched.role === 'admin') setActiveTab('admin');
-        }
+    console.log('[Auth] Effect running, getting session...');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[Auth] getSession resolved:', session?.user?.id);
+      setSession(session);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setAuthLoading(false);
       }
-    }, 0);
-    return () => clearTimeout(timer);
+    });
+
+    console.log('[Auth] Setting up onAuthStateChange listener...');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[Auth] onAuthStateChange fired:', _event, session?.user?.id);
+      setSession(session);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [refreshTrigger]);
 
-  const handleLogin = (user: UserAccount) => {
-    localStorage.setItem('pulse-current-user', user.username);
-    setCurrentUser(user);
-    if (user.role === 'employee') setActiveTab('dashboard');
-    else if (user.role === 'manager') setActiveTab('manager');
-    else if (user.role === 'admin') setActiveTab('admin');
-    triggerRefresh();
-  };
+  async function fetchUserProfile(userId: string) {
+    console.log('[Auth] fetchUserProfile called for:', userId);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      console.log('[Auth] fetchUserProfile result:', { data, error });
+      if (data) {
+        setCurrentUser(data);
+        if (data.role === 'employee') setActiveTab('dashboard');
+        else if (data.role === 'manager') setActiveTab('manager');
+        else if (data.role === 'admin' || data.role === 'it') setActiveTab('admin');
+      } else {
+        setLoginError('Authentication successful, but no User Profile was found. Please run the SQL script to create your profile.');
+      }
+    } catch (e) {
+      console.error('[Auth] Failed to fetch user profile exception:', e);
+      setLoginError('Failed to fetch user profile from database.');
+    } finally {
+      console.log('[Auth] fetchUserProfile finally: setting authLoading to false');
+      setAuthLoading(false);
+    }
+  }
 
-  const handleLogout = () => {
-    localStorage.removeItem('pulse-current-user');
-    setCurrentUser(null);
-    triggerRefresh();
-  };
-
+  // Fetch users list for quick sign in
   useEffect(() => {
-    const loadConfig = () => {
-      const config = PulseDB.getAdminConfig();
-      setSystemPaused(config.systemPaused);
-    };
+    if (!session) {
+      const fetchAccountsForQuickSignIn = async () => {
+        const { data } = await supabase.from('user_profiles').select('*').limit(6);
+        if (data) setLoginAccounts(data);
+      };
+      fetchAccountsForQuickSignIn();
+    }
+  }, [session]);
 
-    setTimeout(loadConfig, 0);
+  const handleLogin = async (email: string, password = 'password123') => {
+    setAuthLoading(true);
+    setLoginError('');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      
+      // Explicitly set session and fetch profile to prevent infinite loading if the auth listener misses the event
+      if (data?.session) {
+        setSession(data.session);
+        await fetchUserProfile(data.session.user.id);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setLoginError(err.message || 'Login failed');
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // Global Config loading (System paused)
+  useEffect(() => {
+    const loadConfig = async () => {
+      const { data } = await supabase.from('admin_configs').select('emergency_kill_switch').limit(1).single();
+      if (data) {
+        setSystemPaused(data.emergency_kill_switch);
+      }
+    };
+    loadConfig();
 
     const handleStatusChange = () => {
       loadConfig();
       triggerRefresh();
     };
-
     window.addEventListener('pulse-system-paused-change', handleStatusChange);
     return () => {
       window.removeEventListener('pulse-system-paused-change', handleStatusChange);
     };
-  }, []);
+  }, [triggerRefresh]);
+
+  // Dashboard Stats loading
+  useEffect(() => {
+    if (!session) return;
+    const fetchStats = async () => {
+      try {
+        const [outboxRes, kudosRes, sentimentRes] = await Promise.all([
+          supabase.from('outbox_messages').select('id', { count: 'exact' }).eq('sender_id', session.user.id).eq('status', 'queued'),
+          supabase.from('kudos_posts').select('id', { count: 'exact' }),
+          supabase.from('mood_logs').select('id', { count: 'exact' }).eq('user_id', session.user.id)
+        ]);
+
+        setOutboxCount(outboxRes.count || 0);
+        setKudosCount(kudosRes.count || 0);
+        setSentimentCount(sentimentRes.count || 0);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchStats();
+  }, [refreshTrigger, session]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -109,19 +189,6 @@ export default function Home() {
         .catch((err) => console.error('Pulse PWA Service worker registration failed:', err));
     }
   }, []);
-
-  useEffect(() => {
-    // Refresh stats count based on DB
-    const outbox = PulseDB.getOutboxMessages().filter(m => m.status === 'scheduled').length;
-    const kudos = PulseDB.getKudos().length;
-    const sentiment = PulseDB.getSentimentLogs().length;
-
-    setTimeout(() => {
-      setOutboxCount(outbox);
-      setKudosCount(kudos);
-      setSentimentCount(sentiment);
-    }, 0);
-  }, [refreshTrigger]);
 
   const getPageTitle = () => {
     switch (activeTab) {
@@ -159,23 +226,24 @@ export default function Home() {
       return;
     }
 
-    const matched = loginAccounts.find(
-      (a) => a.email.toLowerCase() === emailInput.trim().toLowerCase() || a.username.toLowerCase() === emailInput.trim().toLowerCase()
-    );
-
-    if (matched) {
-      const savedPass = matched.password || 'password123';
-      if (savedPass === passwordInput) {
-        handleLogin(matched);
-      } else {
-        setLoginError('Incorrect password.');
-      }
-    } else {
-      setLoginError('No account found with this email or username.');
-    }
+    handleLogin(emailInput, passwordInput);
   };
 
-  if (!currentUser) {
+  console.log('[Render] authLoading:', authLoading, 'currentUser:', !!currentUser, 'session:', !!session);
+
+  if (authLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-6 bg-[#FAF9F6] selection:bg-teal-150 ${highContrast ? 'bg-white text-black' : ''}`}>
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser || !session) {
     return (
       <div className={`min-h-screen flex items-center justify-center p-6 bg-[#FAF9F6] selection:bg-teal-150 ${highContrast ? 'bg-white text-black' : ''
         }`}>
@@ -209,10 +277,10 @@ export default function Home() {
               
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="login-email" className="block text-xs font-bold text-neutral-700 mb-1">Email or Username</label>
+                  <label htmlFor="login-email" className="block text-xs font-bold text-neutral-700 mb-1">Email</label>
                   <input
                     id="login-email"
-                    type="text"
+                    type="email"
                     placeholder="e.g. alex.rivera@axionhr.com"
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
@@ -258,86 +326,85 @@ export default function Home() {
             </div>
 
             {/* Quick Sign-In (Temporary) Below */}
-            <div className="w-full max-w-4xl space-y-4 pt-4 border-t border-neutral-200/50">
-              <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider text-center">
-                Quick Sign-In Shortcuts (Temporary)
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {loginAccounts.map((account) => {
-                  const isManager = account.role === 'manager';
+            {loginAccounts.length > 0 && (
+              <div className="w-full max-w-4xl space-y-4 pt-4 border-t border-neutral-200/50">
+                <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider text-center">
+                  Quick Sign-In Shortcuts (Temporary)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {loginAccounts.map((account) => {
+                    const isManager = account.role === 'Manager';
+                    const isAdmin = account.role === 'Admin' || account.role === 'IT';
 
-                  let accentColor = 'border-teal-150 text-teal-700 bg-teal-50/50 hover:bg-teal-50';
-                  let badgeText = 'Employee Telemetry';
-                  let scopeList = [
-                    'Local Computer Vision eye/posture tracking',
-                    'Rolling sentiment SVG trend line charts',
-                    'Peer Kudos Recognition feed'
-                  ];
-
-                  if (isManager) {
-                    accentColor = 'border-blue-150 text-blue-700 bg-blue-50/50 hover:bg-blue-50';
-                    badgeText = 'Team Analytics';
-                    scopeList = [
-                      'k-Anonymized aggregate workload charts',
-                      'Right-to-Disconnect adherence statistics'
+                    let accentColor = 'border-teal-150 text-teal-700 bg-teal-50/50 hover:bg-teal-50';
+                    let badgeText = 'Employee Telemetry';
+                    let scopeList = [
+                      'Local Computer Vision eye/posture tracking',
+                      'Rolling sentiment SVG trend line charts',
+                      'Peer Kudos Recognition feed'
                     ];
-                  } else if (account.role === 'admin') {
-                    accentColor = 'border-orange-150 text-orange-700 bg-orange-50/50 hover:bg-orange-50';
-                    badgeText = 'IT Settings & Override';
-                    scopeList = [
-                      'Adjust privacy floors & standard hours',
-                      'Emergency "System Paused" red kill switch'
-                    ];
-                  }
 
-                  return (
-                    <button
-                      key={account.username}
-                      onClick={() => handleFormSubmit({
-                        preventDefault: () => {},
-                      } as React.FormEvent)}
-                      // Allow direct log in by calling handleLogin directly
-                      onMouseDown={() => handleLogin(account)}
-                      className={`p-4 text-left bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500 flex flex-col justify-between h-[230px] ${highContrast ? 'border-black hover:border-2 text-black' : 'border-[#f1f0ea]'
-                        }`}
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-9 w-9 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-teal-700 border border-neutral-200 shrink-0">
-                            {account.avatar}
+                    if (isManager) {
+                      accentColor = 'border-blue-150 text-blue-700 bg-blue-50/50 hover:bg-blue-50';
+                      badgeText = 'Team Analytics';
+                      scopeList = [
+                        'k-Anonymized aggregate workload charts',
+                        'Right-to-Disconnect adherence statistics'
+                      ];
+                    } else if (isAdmin) {
+                      accentColor = 'border-orange-150 text-orange-700 bg-orange-50/50 hover:bg-orange-50';
+                      badgeText = 'IT Settings & Override';
+                      scopeList = [
+                        'Adjust privacy floors & standard hours',
+                        'Emergency "System Paused" red kill switch'
+                      ];
+                    }
+
+                    return (
+                      <button
+                        key={account.id}
+                        onMouseDown={() => handleLogin(account.email, 'password123')}
+                        className={`p-4 text-left bg-white rounded-2xl border transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-500 flex flex-col justify-between h-[230px] ${highContrast ? 'border-black hover:border-2 text-black' : 'border-[#f1f0ea]'
+                          }`}
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="h-9 w-9 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-teal-700 border border-neutral-200 shrink-0">
+                              {account.avatar || account.full_name?.substring(0, 2).toUpperCase() || 'U'}
+                            </div>
+                            <div className="truncate">
+                              <h2 className="text-xs font-bold text-neutral-800 leading-tight truncate">{account.full_name}</h2>
+                              <span className="text-[9px] text-neutral-400 font-semibold truncate">{account.job_title}</span>
+                            </div>
                           </div>
-                          <div>
-                            <h2 className="text-xs font-bold text-neutral-800 leading-tight">{account.name}</h2>
-                            <span className="text-[9px] text-neutral-400 font-semibold">{account.title}</span>
-                          </div>
+
+                          <span className={`px-1.5 py-0.5 border rounded text-[8px] font-bold uppercase tracking-wider inline-block ${accentColor}`}>
+                            {badgeText}
+                          </span>
+
+                          <ul className="text-[9px] text-neutral-500 space-y-1 list-disc pl-3 leading-normal">
+                            {scopeList.map((scope, idx) => (
+                              <li key={idx}>{scope}</li>
+                            ))}
+                          </ul>
                         </div>
 
-                        <span className={`px-1.5 py-0.5 border rounded text-[8px] font-bold uppercase tracking-wider inline-block ${accentColor}`}>
-                          {badgeText}
-                        </span>
-
-                        <ul className="text-[9px] text-neutral-500 space-y-1 list-disc pl-3 leading-normal">
-                          {scopeList.map((scope, idx) => (
-                            <li key={idx}>{scope}</li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className={`w-full py-1.5 rounded-lg text-[10px] font-bold text-center border transition ${highContrast
-                          ? 'bg-black text-white hover:bg-neutral-800'
-                          : 'bg-neutral-900 text-white hover:bg-neutral-800 shadow-xs'
-                        }`}>
-                        Quick Sign In
-                      </div>
-                    </button>
-                  );
-                })}
+                        <div className={`w-full py-1.5 rounded-lg text-[10px] font-bold text-center border transition ${highContrast
+                            ? 'bg-black text-white hover:bg-neutral-800'
+                            : 'bg-neutral-900 text-white hover:bg-neutral-800 shadow-xs'
+                          }`}>
+                          Quick Sign In
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="text-center text-[10px] text-neutral-400 font-semibold max-w-sm mx-auto leading-relaxed pt-4">
-            🔒 All account configurations and telemetry calculations persist locally in browser LocalStorage. No databases are shared.
+            🔒 Uses Supabase Auth layer. Default test user passwords are 'password123'.
           </div>
         </div>
       </div>
@@ -390,7 +457,7 @@ export default function Home() {
                 }`}>
                 <div className="space-y-1">
                   <h2 className="text-lg font-bold text-neutral-800">
-                    Welcome back, {currentUser.name.split(' ')[0]}.
+                    Welcome back, {currentUser.full_name?.split(' ')[0]}.
                   </h2>
                   <p className="text-xs text-neutral-500 max-w-lg leading-relaxed">
                     AxionHR Well-Being Guardian is monitoring locally. Your data is 100% private, anonymous, and encrypted inside this browser sandbox.
@@ -543,22 +610,29 @@ export default function Home() {
               <p className="text-xs text-neutral-500 mt-1">First-time login setup: Please verify and fill out your required profile information to access the WBG portal.</p>
             </div>
             
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const pName = formData.get('name') as string;
               const pPhone = formData.get('phone') as string;
               const pAddress = formData.get('address') as string;
-              const pPass = formData.get('password') as string;
               
               if(pName && pPhone) {
-                PulseDB.updateUserAccount(currentUser.username, {
-                  name: pName.trim(),
-                  phone: pPhone.trim(),
-                  address: pAddress ? pAddress.trim() : undefined,
-                  password: pPass ? pPass.trim() : undefined
-                });
-                triggerRefresh();
+                try {
+                  const { error } = await supabase
+                    .from('user_profiles')
+                    .update({
+                      full_name: pName.trim(),
+                      phone: pPhone.trim(),
+                      address: pAddress ? pAddress.trim() : null
+                    })
+                    .eq('id', currentUser.id);
+                  if (error) throw error;
+                  triggerRefresh();
+                } catch (e) {
+                  console.error(e);
+                  alert('Failed to save profile setup.');
+                }
               }
             }} className="space-y-4">
               <div>
@@ -566,7 +640,7 @@ export default function Home() {
                 <input
                   name="name"
                   type="text"
-                  defaultValue={currentUser.name}
+                  defaultValue={currentUser.full_name}
                   required
                   className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
                     highContrast ? 'border-black' : 'border-neutral-200'
@@ -604,18 +678,6 @@ export default function Home() {
                   name="address"
                   type="text"
                   placeholder="e.g. 123 Elm St, Springfield, IL"
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Update Password (Optional)</label>
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
                   className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
                     highContrast ? 'border-black' : 'border-neutral-200'
                   }`}

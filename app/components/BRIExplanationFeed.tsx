@@ -2,8 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bell, ArrowRight, ChevronRight, X, TrendingUp, TrendingDown } from 'lucide-react';
-import { PulseDB, BRIShiftRecord } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+type BRIShiftRecord = Database['public']['Tables']['bri_shift_records']['Row'];
+
+// Shape of each factor stored inside the feature_weights JSONB column
+interface FeatureFactor {
+  name: string;
+  weight: number;
+  details: string;
+}
 
 interface BRIExplanationFeedProps {
   refreshTrigger: number;
@@ -12,13 +22,35 @@ interface BRIExplanationFeedProps {
 export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFeedProps) {
   const { highContrast } = useAccessibility();
   const [shifts, setShifts] = useState<BRIShiftRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedShift, setSelectedShift] = useState<BRIShiftRecord | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShifts(PulseDB.getBRIShifts());
-    }, 0);
-    return () => clearTimeout(timer);
+    const fetchShifts = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error: fetchError } = await supabase
+          .from('bri_shift_records')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true });
+
+        if (fetchError) throw fetchError;
+        setShifts(data ?? []);
+      } catch (err) {
+        setError('Could not load BRI shift history.');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchShifts();
   }, [refreshTrigger]);
 
   const getBandColor = (band: string) => {
@@ -38,9 +70,21 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
     return order.indexOf(to) > order.indexOf(from);
   };
 
-  const formatTime = (ts: number) => {
-    const d = new Date(ts);
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Safely extract the factors array from the JSONB feature_weights column
+  const getFactors = (shift: BRIShiftRecord): FeatureFactor[] => {
+    const fw = shift.feature_weights;
+    if (!fw || typeof fw !== 'object') return [];
+
+    // feature_weights stored as { factors: FeatureFactor[] }
+    const raw = (fw as Record<string, unknown>).factors;
+    if (!Array.isArray(raw)) return [];
+
+    return raw as FeatureFactor[];
   };
 
   return (
@@ -66,7 +110,17 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
           )}
         </div>
 
-        {shifts.length === 0 ? (
+        {isLoading ? (
+          <div className="py-8 flex items-center justify-center">
+            <div className="flex gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        ) : error ? (
+          <div className="py-8 text-center text-xs text-red-500">{error}</div>
+        ) : shifts.length === 0 ? (
           <div className="py-8 text-center space-y-2">
             <div className="h-12 w-12 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center mx-auto">
               <TrendingUp className="h-5 w-5 text-neutral-300" />
@@ -86,9 +140,9 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
               >
                 {/* Direction indicator */}
                 <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                  isEscalation(shift.fromBand, shift.toBand) ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+                  isEscalation(shift.previous_band, shift.new_band) ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
                 }`}>
-                  {isEscalation(shift.fromBand, shift.toBand) ? (
+                  {isEscalation(shift.previous_band, shift.new_band) ? (
                     <TrendingUp className="h-4 w-4" />
                   ) : (
                     <TrendingDown className="h-4 w-4" />
@@ -98,11 +152,11 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
                 {/* Labels */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getBandColor(shift.fromBand)}`}>{shift.fromBand}</span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getBandColor(shift.previous_band)}`}>{shift.previous_band}</span>
                     <ArrowRight className="h-3 w-3 text-neutral-300 shrink-0" />
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getBandColor(shift.toBand)}`}>{shift.toBand}</span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${getBandColor(shift.new_band)}`}>{shift.new_band}</span>
                   </div>
-                  <span className="block text-[10px] text-neutral-400 mt-1">{formatTime(shift.timestamp)}</span>
+                  <span className="block text-[10px] text-neutral-400 mt-1">{formatTime(shift.created_at)}</span>
                 </div>
 
                 <ChevronRight className="h-4 w-4 text-neutral-300 shrink-0" />
@@ -129,7 +183,7 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <h3 id="drawer-title" className="text-sm font-bold text-neutral-800">Category Shift Details</h3>
-                  <p className="text-[10px] text-neutral-400">{formatTime(selectedShift.timestamp)}</p>
+                  <p className="text-[10px] text-neutral-400">{formatTime(selectedShift.created_at)}</p>
                 </div>
                 <button
                   onClick={() => setSelectedShift(null)}
@@ -143,13 +197,13 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
               {/* Shift direction */}
               <div className="flex items-center justify-center gap-4 py-4">
                 <div className="text-center">
-                  <div className={`h-3 w-3 rounded-full mx-auto mb-1.5 ${getBandDotColor(selectedShift.fromBand)}`} />
-                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${getBandColor(selectedShift.fromBand)}`}>{selectedShift.fromBand}</span>
+                  <div className={`h-3 w-3 rounded-full mx-auto mb-1.5 ${getBandDotColor(selectedShift.previous_band)}`} />
+                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${getBandColor(selectedShift.previous_band)}`}>{selectedShift.previous_band}</span>
                 </div>
                 <ArrowRight className="h-5 w-5 text-neutral-300" />
                 <div className="text-center">
-                  <div className={`h-3 w-3 rounded-full mx-auto mb-1.5 ${getBandDotColor(selectedShift.toBand)}`} />
-                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${getBandColor(selectedShift.toBand)}`}>{selectedShift.toBand}</span>
+                  <div className={`h-3 w-3 rounded-full mx-auto mb-1.5 ${getBandDotColor(selectedShift.new_band)}`} />
+                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${getBandColor(selectedShift.new_band)}`}>{selectedShift.new_band}</span>
                 </div>
               </div>
 
@@ -159,23 +213,27 @@ export default function BRIExplanationFeed({ refreshTrigger }: BRIExplanationFee
                   Top 3 Contributing Factors at Time of Shift
                 </span>
                 <div className="space-y-3 mt-3">
-                  {selectedShift.factors.map((factor, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-neutral-700">{factor.name}</span>
-                        <span className="font-extrabold text-neutral-400">{factor.weight}%</span>
+                  {getFactors(selectedShift).length === 0 ? (
+                    <p className="text-xs text-neutral-400 italic">No factor breakdown available for this shift.</p>
+                  ) : (
+                    getFactors(selectedShift).map((factor, i) => (
+                      <div key={i} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-neutral-700">{factor.name}</span>
+                          <span className="font-extrabold text-neutral-400">{factor.weight}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              i === 0 ? 'bg-orange-500' : i === 1 ? 'bg-teal-600' : 'bg-neutral-500'
+                            }`}
+                            style={{ width: `${factor.weight}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-neutral-400 leading-snug">{factor.details}</p>
                       </div>
-                      <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            i === 0 ? 'bg-orange-500' : i === 1 ? 'bg-teal-600' : 'bg-neutral-500'
-                          }`}
-                          style={{ width: `${factor.weight}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-neutral-400 leading-snug">{factor.details}</p>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 

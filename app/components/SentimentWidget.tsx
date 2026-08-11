@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Heart, X, Check, Smile } from 'lucide-react';
-import { PulseDB } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+type AdminConfig = Database['public']['Tables']['admin_configs']['Row'];
 
 interface SentimentWidgetProps {
   onLogSaved: () => void;
@@ -14,6 +17,7 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [lastLoggedTime, setLastLoggedTime] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
 
   const moods = [
     { score: 1, emoji: '😢', label: 'Struggling', color: 'hover:bg-red-50 text-red-600' },
@@ -23,41 +27,58 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
     { score: 5, emoji: '😄', label: 'Energized', color: 'hover:bg-green-50 text-green-600' },
   ];
 
-  const isNearEndOfWorkingHours = () => {
+  // Load admin config for working hours calculation
+  useEffect(() => {
+    const fetchAdminConfig = async () => {
+      const { data } = await supabase
+        .from('admin_configs')
+        .select('*')
+        .single();
+      if (data) setAdminConfig(data);
+    };
+    fetchAdminConfig();
+  }, []);
+
+  const isNearEndOfWorkingHours = useCallback(() => {
     try {
-      const config = PulseDB.getAdminConfig();
-      if (!config || !config.workingHoursEnd) return false;
-      
-      const [endHour, endMin] = config.workingHoursEnd.split(':').map(Number);
+      if (!adminConfig || !adminConfig.standard_workday_end) return false;
+
+      const [endHour, endMin] = adminConfig.standard_workday_end.split(':').map(Number);
       const now = new Date();
-      const currentHour = now.getHours();
-      const currentMin = now.getMinutes();
-      
-      const nowMinutes = currentHour * 60 + currentMin;
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const endMinutes = endHour * 60 + endMin;
-      
+
       // Near end is defined as within 60 minutes before workingHoursEnd or anytime after
       return nowMinutes >= (endMinutes - 60);
     } catch (e) {
       console.error('Error calculating working hours end:', e);
       return false;
     }
-  };
+  }, [adminConfig]);
 
   // Morning Launch Trigger (Automated, capped at 1/day)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const logs = PulseDB.getSentimentLogs();
+    const timer = setTimeout(async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const todayStr = new Date().toDateString();
-      
-      let hasLoggedToday = false;
-      if (logs.length > 0) {
-        const lastLog = logs[logs.length - 1];
-        const lastLogDate = new Date(lastLog.timestamp).toDateString();
-        if (lastLogDate === todayStr) {
-          hasLoggedToday = true;
-          setLastLoggedTime(new Date(lastLog.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        }
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const { data: logs } = await supabase
+        .from('mood_logs')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', todayStart.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const hasLoggedToday = logs && logs.length > 0;
+      if (hasLoggedToday && logs[0]) {
+        setLastLoggedTime(
+          new Date(logs[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        );
       }
 
       const morningTriggeredDate = localStorage.getItem('pulse-morning-checkin-triggered-date');
@@ -65,15 +86,12 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
 
       if (!hasLoggedToday) {
         if (!alreadyMorningTriggeredToday) {
-          // Open automated prompt
           setIsExpanded(true);
           localStorage.setItem('pulse-morning-checkin-triggered-date', todayStr);
         } else {
-          // Capped: already prompted today but not checked in, keep minimized
           setIsExpanded(false);
         }
       } else {
-        // Logged today: keep minimized
         setIsExpanded(false);
       }
     }, 0);
@@ -83,17 +101,27 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
 
   // End-of-Day Exit Trigger (Automated, capped at 1/day)
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'hidden') {
-        const logs = PulseDB.getSentimentLogs();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
         const todayStr = new Date().toDateString();
-        
-        const hasLoggedToday = logs.some(l => new Date(l.timestamp).toDateString() === todayStr);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const { data: logs } = await supabase
+          .from('mood_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .gte('created_at', todayStart.toISOString())
+          .limit(1);
+
+        const hasLoggedToday = logs && logs.length > 0;
         const exitTriggeredDate = localStorage.getItem('pulse-exit-checkin-triggered-date');
         const alreadyExitTriggeredToday = exitTriggeredDate === todayStr;
 
         if (!hasLoggedToday && !alreadyExitTriggeredToday && isNearEndOfWorkingHours()) {
-          // Trigger exit prompt
           localStorage.setItem('pulse-exit-checkin-triggered-date', todayStr);
           setIsExpanded(true);
         }
@@ -104,20 +132,29 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isNearEndOfWorkingHours]);
 
-  const handleMoodSelect = (score: number, emoji: string) => {
-    PulseDB.addSentimentLog(score, emoji);
-    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setLastLoggedTime(nowStr);
-    setShowSuccess(true);
-    onLogSaved();
+  const handleMoodSelect = async (score: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-    // Transition from success to minimized state
-    setTimeout(() => {
-      setShowSuccess(false);
-      setIsExpanded(false);
-    }, 2500);
+    const { error } = await supabase.from('mood_logs').insert({
+      user_id: user.id,
+      mood_score: score,
+    });
+
+    if (!error) {
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastLoggedTime(nowStr);
+      setShowSuccess(true);
+      onLogSaved();
+
+      // Transition from success to minimized state
+      setTimeout(() => {
+        setShowSuccess(false);
+        setIsExpanded(false);
+      }, 2500);
+    }
   };
 
   if (!isExpanded) {
@@ -142,7 +179,7 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
   }
 
   return (
-    <div 
+    <div
       className={`fixed bottom-6 right-6 z-40 w-80 p-5 rounded-2xl bg-white shadow-2xl border transition-all duration-300 ${
         highContrast ? 'border-black text-black' : 'border-neutral-100'
       }`}
@@ -186,7 +223,7 @@ export default function SentimentWidget({ onLogSaved }: SentimentWidgetProps) {
             {moods.map((mood) => (
               <button
                 key={mood.score}
-                onClick={() => handleMoodSelect(mood.score, mood.emoji)}
+                onClick={() => handleMoodSelect(mood.score)}
                 className={`flex flex-col items-center py-2.5 rounded-xl border border-transparent transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1 ${mood.color}`}
                 aria-label={`Mood: ${mood.label}`}
                 title={mood.label}

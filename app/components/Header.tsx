@@ -12,11 +12,11 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import WebcamCVConsentModal from './WebcamCVConsentModal';
-import { UserAccount } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
 
 interface HeaderProps {
   title: string;
-  currentUser: UserAccount;
+  currentUser: any; // Using any during migration transition
   onLogout: () => void;
 }
 
@@ -44,31 +44,74 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
   const [cvActive, setCvActive] = useState(true);
   const [cvTooltipVisible, setCvTooltipVisible] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Load CV active state from localStorage
+  // Load CV active state from Supabase (or fallback to local while transitioning)
   useEffect(() => {
-    const savedCv = localStorage.getItem('pulse-cv-active');
-    const consent = localStorage.getItem('pulse-cv-consent') === 'true';
-    if (savedCv !== null) {
-      setTimeout(() => {
-        setCvActive(savedCv === 'true' && consent);
-      }, 0);
-    }
+    const fetchConsent = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('camera_telemetry_consented')
+          .eq('id', user.id)
+          .single();
+        if (data) {
+          setCvActive(data.camera_telemetry_consented);
+          // Also persist back to localStorage for fallback scripts that might still check it
+          localStorage.setItem('pulse-cv-consent', String(data.camera_telemetry_consented));
+          localStorage.setItem('pulse-cv-active', String(data.camera_telemetry_consented));
+        }
+      } else {
+        // Fallback for when not fully migrated in page.tsx
+        const savedCv = localStorage.getItem('pulse-cv-active');
+        const consent = localStorage.getItem('pulse-cv-consent') === 'true';
+        if (savedCv !== null) {
+          setCvActive(savedCv === 'true' && consent);
+        }
+      }
+    };
+    fetchConsent();
   }, []);
 
+  const updateConsentDB = async (val: boolean) => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('user_profiles')
+          .update({ camera_telemetry_consented: val })
+          .eq('id', user.id);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleCv = () => {
+    if (loading) return;
+
     if (cvActive) {
       setCvActive(false);
       localStorage.setItem('pulse-cv-active', 'false');
+      // If we pause, we aren't revoking consent necessarily, just pausing the stream.
+      // But based on the original logic, pulse-cv-active is separate from pulse-cv-consent.
+      // Since the DB only has `camera_telemetry_consented`, we will tie them together for the DB layer.
+      updateConsentDB(false);
       
       setCvTooltipVisible(true);
       const timer = setTimeout(() => setCvTooltipVisible(false), 4000);
       return () => clearTimeout(timer);
     } else {
       const consent = localStorage.getItem('pulse-cv-consent') === 'true';
+      // In the new world, if we toggle it back on, we should just show the consent modal if they don't have it.
       if (consent) {
         setCvActive(true);
         localStorage.setItem('pulse-cv-active', 'true');
+        updateConsentDB(true);
         
         setCvTooltipVisible(true);
         const timer = setTimeout(() => setCvTooltipVisible(false), 4000);
@@ -84,6 +127,7 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
     localStorage.setItem('pulse-cv-active', 'true');
     setCvActive(true);
     setIsConsentModalOpen(false);
+    updateConsentDB(true);
     
     setCvTooltipVisible(true);
     setTimeout(() => setCvTooltipVisible(false), 4000);
@@ -94,6 +138,7 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
     localStorage.setItem('pulse-cv-active', 'false');
     setCvActive(false);
     setIsConsentModalOpen(false);
+    updateConsentDB(false);
   };
 
   return (
@@ -127,11 +172,12 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
         <div className="relative">
           <button
             onClick={toggleCv}
+            disabled={loading}
             className={`p-2.5 rounded-full relative transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
               cvActive 
                 ? (highContrast ? 'bg-black text-white border-2 border-black animate-glow-teal' : 'bg-teal-50 text-teal-600 animate-glow-teal')
                 : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'
-            }`}
+            } ${loading ? 'opacity-50' : ''}`}
             aria-label={cvActive ? "Pause Local Well-being Computer Vision Telemetry" : "Resume Local Well-being Computer Vision Telemetry"}
             aria-live="polite"
             onMouseEnter={() => setCvTooltipVisible(true)}
@@ -382,18 +428,18 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
         <div className="flex items-center gap-3 pl-2 border-l border-neutral-200">
           <div className="relative h-9 w-9 rounded-full overflow-hidden border border-neutral-200 shrink-0 select-none">
             <div className="h-full w-full bg-neutral-100 flex items-center justify-center font-bold text-teal-700 text-sm animate-fade-in">
-              {currentUser.avatar}
+              {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'U'}
             </div>
           </div>
           <div className="hidden sm:block text-left select-none animate-fade-in">
-            <span className="block text-xs font-bold text-neutral-800 leading-none">{currentUser.name}</span>
-            <span className="block text-[9px] text-neutral-400 mt-1 font-semibold">{currentUser.title}</span>
+            <span className="block text-xs font-bold text-neutral-800 leading-none">{currentUser?.name || currentUser?.full_name}</span>
+            <span className="block text-[9px] text-neutral-400 mt-1 font-semibold">{currentUser?.title || currentUser?.job_title}</span>
           </div>
           {/* Sign Out Action */}
           <button
             onClick={onLogout}
             className={`p-1.5 rounded-lg hover:bg-neutral-50 border border-transparent transition focus:outline-none focus:ring-2 focus:ring-red-500`}
-            aria-label={`Log out from ${currentUser.name}`}
+            aria-label={`Log out from ${currentUser?.name || currentUser?.full_name}`}
             title="Sign Out Account"
           >
             <LogOut className="h-4 w-4 text-neutral-400 hover:text-red-500 transition-colors" />

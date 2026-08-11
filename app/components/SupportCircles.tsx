@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, ShieldCheck, User, Compass, Plus, X, Search } from 'lucide-react';
-import { PulseDB, SupportMessage } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+type SupportCircleMessage = Database['public']['Tables']['support_circle_messages']['Row'];
 
 interface Circle {
   id: string;
@@ -13,9 +16,22 @@ interface Circle {
   members: number;
 }
 
+// Extended message for UI
+interface UIMessage extends SupportCircleMessage {
+  displayAuthor: string;
+  isAnonymous: boolean;
+  isCurrentUser: boolean;
+}
+
 export default function SupportCircles() {
   const { highContrast } = useAccessibility();
-  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [activeCircleId, setActiveCircleId] = useState('stress');
   const [inputText, setInputText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
@@ -38,11 +54,67 @@ export default function SupportCircles() {
   ]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMessages(PulseDB.getSupportMessages());
-    }, 0);
-    return () => clearTimeout(timer);
+    let channel: any;
+
+    const initFetch = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUser(user);
+
+        // Fetch all profiles for non-anonymous name mapping
+        const { data: profileData } = await supabase.from('user_profiles').select('id, full_name');
+        const profileMap: Record<string, string> = {};
+        if (profileData) {
+          profileData.forEach(p => {
+            profileMap[p.id] = p.full_name;
+          });
+        }
+        setProfiles(profileMap);
+
+        await fetchMessages(profileMap, user?.id);
+
+        channel = supabase
+          .channel(`support-circles-${Date.now()}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'support_circle_messages' }, () => {
+            fetchMessages(profileMap, user?.id);
+          })
+          .subscribe();
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load support circles messages.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initFetch();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
+
+  const fetchMessages = async (profileMap: Record<string, string>, currentUserId: string | undefined) => {
+    const { data, error: fetchErr } = await supabase
+      .from('support_circle_messages')
+      .select('*')
+      .order('created_at', { ascending: true });
+    
+    if (fetchErr) throw fetchErr;
+
+    const mapped = (data || []).map(m => {
+      const isAnon = !!m.pseudonym_alias;
+      return {
+        ...m,
+        isAnonymous: isAnon,
+        displayAuthor: isAnon ? m.pseudonym_alias! : (profileMap[m.user_id] || 'Unknown User'),
+        isCurrentUser: m.user_id === currentUserId
+      };
+    });
+
+    setMessages(mapped);
+  };
 
   const handleJoinCircle = (circle: Circle) => {
     setActiveCircles([...activeCircles, circle]);
@@ -60,18 +132,32 @@ export default function SupportCircles() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeCircleId, messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
+  const generatePseudonym = () => {
+    const adjs = ['Quiet', 'Brave', 'Gentle', 'Thoughtful', 'Resilient'];
+    const nouns = ['Panda', 'Oak', 'River', 'Sparrow', 'Echo'];
+    return `${adjs[Math.floor(Math.random() * adjs.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`;
+  };
 
-    // Send message to local DB
-    PulseDB.addSupportMessage(activeCircleId, inputText, 'Alex Rivera', isAnonymous);
-    setMessages(PulseDB.getSupportMessages());
-    setInputText('');
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || !currentUser) return;
+
+    try {
+      await supabase.from('support_circle_messages').insert({
+        user_id: currentUser.id,
+        topic_channel: activeCircleId,
+        message: inputText.trim(),
+        pseudonym_alias: isAnonymous ? generatePseudonym() : null
+      });
+      setInputText('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send message.');
+    }
   };
 
   const activeCircle = activeCircles.find(c => c.id === activeCircleId) || activeCircles[0];
-  const activeCircleMessages = messages.filter(m => m.circleId === activeCircleId);
+  const activeCircleMessages = messages.filter(m => m.topic_channel === activeCircleId);
 
   return (
     <>
@@ -166,16 +252,34 @@ export default function SupportCircles() {
 
         {/* Messages List Area */}
         <div className="flex-1 p-4 overflow-y-auto space-y-4 min-h-0 bg-neutral-50/20">
-          {activeCircleMessages.length === 0 ? (
-            <div className="py-20 text-center text-neutral-400 text-xs">
-              No conversations in this circle yet. Start the discussion!
+          {isLoading ? (
+            <div className="py-20 flex items-center justify-center">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          ) : error ? (
+            <div className="py-20 text-center text-red-500 text-xs">{error}</div>
+          ) : activeCircleMessages.length === 0 ? (
+            <div className={`py-16 px-6 text-center bg-white rounded-2xl border ${
+              highContrast ? 'border-black' : 'border-[#f1f0ea]'
+            }`}>
+              <div className="h-12 w-12 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-4 border border-teal-100">
+                <span className="text-2xl select-none">{activeCircle.emoji}</span>
+              </div>
+              <p className="text-xs font-bold text-neutral-700">This space is waiting for your voice.</p>
+              <p className="text-[11px] text-neutral-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                Share your thoughts, challenges, or wins. Your perspective might be exactly what someone else in the <span className="font-semibold text-neutral-600">{activeCircle.name}</span> circle needs to hear today.
+              </p>
             </div>
           ) : (
             activeCircleMessages.map((msg) => (
               <div 
                 key={msg.id}
                 className={`flex gap-3 text-xs max-w-[85%] ${
-                  msg.author === 'Alex Rivera' ? 'ml-auto flex-row-reverse' : ''
+                  msg.isCurrentUser ? 'ml-auto flex-row-reverse' : ''
                 }`}
               >
                 {/* Author Avatar */}
@@ -190,9 +294,9 @@ export default function SupportCircles() {
                 {/* Message Bubble */}
                 <div className="space-y-1">
                   <div className={`flex items-center gap-1.5 ${
-                    msg.author === 'Alex Rivera' ? 'justify-end' : ''
+                    msg.isCurrentUser ? 'justify-end' : ''
                   }`}>
-                    <span className="font-bold text-neutral-700 text-[10px]">{msg.author}</span>
+                    <span className="font-bold text-neutral-700 text-[10px]">{msg.displayAuthor}</span>
                     {msg.isAnonymous && (
                       <span className="px-1 bg-neutral-200 text-neutral-600 rounded-[3px] text-[8px] font-extrabold uppercase">
                         Shielded
@@ -200,11 +304,11 @@ export default function SupportCircles() {
                     )}
                   </div>
                   <div className={`p-3 rounded-2xl border text-neutral-600 leading-normal ${
-                    msg.author === 'Alex Rivera'
+                    msg.isCurrentUser
                       ? (highContrast ? 'bg-black text-white border-black rounded-tr-none' : 'bg-teal-50 text-teal-900 border-teal-100 rounded-tr-none')
                       : (highContrast ? 'bg-white text-black border-black rounded-tl-none' : 'bg-white border-neutral-100 rounded-tl-none')
                   }`}>
-                    {msg.content}
+                    {msg.message}
                   </div>
                 </div>
               </div>

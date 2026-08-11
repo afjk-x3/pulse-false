@@ -1,30 +1,34 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserAccount, PulseDB } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { Save, User, ShieldAlert, CheckCircle } from 'lucide-react';
 
+type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+
 interface SettingsViewProps {
-  currentUser: UserAccount;
+  currentUser: UserProfile;
   onUserUpdated: () => void;
 }
 
 export default function SettingsView({ currentUser, onUserUpdated }: SettingsViewProps) {
   const { highContrast } = useAccessibility();
-  
-  const [name, setName] = useState(currentUser.name);
+
+  const [name, setName] = useState(currentUser.full_name);
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [address, setAddress] = useState(currentUser.address || '');
-  const [password, setPassword] = useState(currentUser.password || '');
-  const [avatar, setAvatar] = useState(currentUser.avatar);
+  const [avatar, setAvatar] = useState(currentUser.avatar || '');
+  const [newPassword, setNewPassword] = useState('');
 
+  const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   const avatarPresets = ['AR', 'DV', 'PS', 'SC', 'MK', 'LH', 'JW', 'KL'];
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -38,20 +42,38 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
       return;
     }
 
-    const updated = PulseDB.updateUserAccount(currentUser.username, {
-      name: name.trim(),
-      phone: phone.trim(),
-      address: address.trim(),
-      password: password.trim() || undefined,
-      avatar: avatar
-    });
+    setIsLoading(true);
+    try {
+      // Update profile fields in Supabase
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: name.trim(),
+          phone: phone.trim(),
+          address: address.trim() || null,
+          avatar: avatar || null,
+        })
+        .eq('id', currentUser.id);
 
-    if (updated) {
+      if (profileError) throw profileError;
+
+      // If the user entered a new password, update it via Supabase Auth
+      if (newPassword.trim()) {
+        const { error: authError } = await supabase.auth.updateUser({
+          password: newPassword.trim(),
+        });
+        if (authError) throw authError;
+      }
+
       setSuccessMsg('Profile settings updated successfully!');
       onUserUpdated();
+      setNewPassword('');
       setTimeout(() => setSuccessMsg(''), 3000);
-    } else {
-      setErrorMsg('Failed to update profile settings.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile settings.';
+      setErrorMsg(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,17 +142,17 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
               />
             </div>
 
-            {/* Password */}
+            {/* New Password */}
             <div>
               <label htmlFor="settings-password" className="block text-xs font-bold text-neutral-700 mb-1">
-                Password
+                New Password <span className="text-neutral-400 font-normal">(Leave blank to keep current)</span>
               </label>
               <input
                 id="settings-password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
                   highContrast ? 'border-black' : 'border-neutral-200'
                 }`}
@@ -193,14 +215,15 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
           <div className="border-t pt-4 flex justify-end">
             <button
               type="submit"
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+              disabled={isLoading}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${
                 highContrast
                   ? 'bg-black text-white hover:bg-neutral-800'
                   : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
               }`}
             >
               <Save className="h-4 w-4" />
-              <span>Save Changes</span>
+              <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>
         </form>

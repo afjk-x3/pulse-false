@@ -17,7 +17,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { UserAccount } from '../lib/db';
 
 export type TabType = 'dashboard' | 'kudos' | 'support' | 'privacy' | 'coffee' | 'manager' | 'admin' | 'settings';
 
@@ -26,7 +25,7 @@ interface SidebarProps {
   setActiveTab: (tab: TabType) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  currentUser: UserAccount;
+  currentUser: any; // Using any during Supabase migration transition
   onLogout: () => void;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
@@ -38,15 +37,15 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
   const fullItems = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard, desc: 'View well-being indicators', roles: ['employee'] },
     { id: 'manager' as TabType, label: 'Manager View', icon: Users, desc: 'Team aggregate metrics', roles: ['manager'] },
-    { id: 'admin' as TabType, label: 'Admin Control', icon: Sliders, desc: 'System configuration', roles: ['admin'] },
+    { id: 'admin' as TabType, label: 'Admin Control', icon: Sliders, desc: 'System configuration', roles: ['admin', 'it'] },
     { id: 'kudos' as TabType, label: 'Kudos Feed', icon: Award, desc: 'Peer recognition wall', roles: ['employee', 'manager'] },
     { id: 'support' as TabType, label: 'Support Circles', icon: Users, desc: 'Connect with support groups', roles: ['employee', 'manager'] },
     { id: 'coffee' as TabType, label: 'Coffee Roulette', icon: Coffee, desc: 'Social connector matches', roles: ['employee'] },
-    { id: 'privacy' as TabType, label: 'Privacy Center', icon: Lock, desc: 'Data control and compliance', roles: ['employee', 'manager', 'admin'] },
-    { id: 'settings' as TabType, label: 'Settings', icon: Settings, desc: 'Manage your profile settings', roles: ['employee', 'manager', 'admin'] },
+    { id: 'privacy' as TabType, label: 'Privacy Center', icon: Lock, desc: 'Data control and compliance', roles: ['employee', 'manager', 'admin', 'it'] },
+    { id: 'settings' as TabType, label: 'Settings', icon: Settings, desc: 'Manage your profile settings', roles: ['employee', 'manager', 'admin', 'it'] },
   ];
 
-  const menuItems = fullItems.filter(item => item.roles.includes(currentUser.role));
+  const menuItems = fullItems.filter(item => item.roles.includes(currentUser?.role || currentUser?.roleName)); // fallback to mock DB format if needed
 
   return (
     <>

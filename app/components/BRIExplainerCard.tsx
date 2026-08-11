@@ -3,32 +3,63 @@
 import React, { useState, useEffect } from 'react';
 import { HelpCircle, Sparkles, UserCheck } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { supabase } from '../lib/supabaseClient';
 
 export default function BRIExplainerCard() {
   const { highContrast } = useAccessibility();
   const [shareWithManager, setShareWithManager] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('pulse-bri-share-manager') === 'true';
-    const timer = setTimeout(() => {
-      setShareWithManager(saved);
-    }, 0);
-    return () => clearTimeout(timer);
+    const fetchPref = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('share_bri_with_manager')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setShareWithManager(data.share_bri_with_manager);
+      }
+    };
+    fetchPref();
   }, []);
 
-  const handleToggleShare = () => {
+  const handleToggleShare = async () => {
+    if (loading) return;
+    setLoading(true);
     const nextState = !shareWithManager;
-    setShareWithManager(nextState);
-    localStorage.setItem('pulse-bri-share-manager', String(nextState));
-
-    // Show temporary confirmation message
-    const msg = nextState 
-      ? "Opt-in shared: Your direct manager (Derek) will see your aggregate 7-day trend line. Individual telemetry remains hidden."
-      : "Sharing revoked: Your manager can no longer access your trend line history.";
     
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+    // Optimistic UI update
+    setShareWithManager(nextState);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ share_bri_with_manager: nextState })
+          .eq('id', user.id);
+          
+        if (error) throw error;
+
+        // Show temporary confirmation message
+        const msg = nextState 
+          ? "Opt-in shared: Your direct manager (Derek) will see your aggregate 7-day trend line. Individual telemetry remains hidden."
+          : "Sharing revoked: Your manager can no longer access your trend line history.";
+        
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4000);
+      }
+    } catch (e) {
+      console.error(e);
+      // Revert if error
+      setShareWithManager(!nextState);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const factors = [
@@ -94,9 +125,10 @@ export default function BRIExplainerCard() {
             role="switch"
             aria-checked={shareWithManager}
             onClick={handleToggleShare}
+            disabled={loading}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
               shareWithManager ? 'bg-teal-600' : 'bg-neutral-200'
-            }`}
+            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
               shareWithManager ? 'translate-x-4' : 'translate-x-0'

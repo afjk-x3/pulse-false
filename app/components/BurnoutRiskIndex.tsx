@@ -2,8 +2,27 @@
 
 import React, { useState, useEffect } from 'react';
 import { Info, Shield, ArrowRight } from 'lucide-react';
-import { PulseDB } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+// BRI heatmap data shape — derived from mood_logs and bri_shift_records
+interface BRIDayEntry {
+  date: string;  // e.g. 'Mon', 'Tue', etc.
+  score: number; // 1 = Low, 2 = Moderate, 3 = Elevated
+}
+
+// Seed data used when the user has no real BRI history yet
+const SEED_BRI_DATA: BRIDayEntry[] = [
+  { date: 'Mon', score: 1 },
+  { date: 'Tue', score: 1 },
+  { date: 'Wed', score: 2 },
+  { date: 'Thu', score: 2 },
+  { date: 'Fri', score: 3 },
+  { date: 'Sat', score: 1 },
+  { date: 'Sun', score: 2 },
+];
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface BurnoutRiskIndexProps {
   onNavigateToTab: (tab: 'dashboard' | 'kudos' | 'support' | 'privacy') => void;
@@ -12,14 +31,66 @@ interface BurnoutRiskIndexProps {
 
 export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger }: BurnoutRiskIndexProps) {
   const { highContrast } = useAccessibility();
-  const [riskData, setRiskData] = useState<{ date: string; score: number }[]>([]);
+  const [riskData, setRiskData] = useState<BRIDayEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      setRiskData(PulseDB.getBurnoutRiskIndex());
-    }, 0);
+    const fetchBRI = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setRiskData(SEED_BRI_DATA);
+          return;
+        }
+
+        // Fetch the last 7 bri_shift_records to build the heatmap
+        const { data: shifts, error } = await supabase
+          .from('bri_shift_records')
+          .select('new_band, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(7);
+
+        if (error) throw error;
+
+        if (!shifts || shifts.length === 0) {
+          // No BRI history — show seeded display data
+          setRiskData(SEED_BRI_DATA);
+          return;
+        }
+
+        const bandToScore = (band: string): number => {
+          if (band === 'Low') return 1;
+          if (band === 'Moderate') return 2;
+          return 3;
+        };
+
+        // Reverse so oldest is first (left-to-right on grid)
+        const built: BRIDayEntry[] = [...shifts]
+          .reverse()
+          .map(s => ({
+            date: DAY_LABELS[new Date(s.created_at).getDay()],
+            score: bandToScore(s.new_band),
+          }));
+
+        // Pad to 7 entries with seed data if fewer than 7 real shifts
+        const padded = built.length < 7
+          ? [...SEED_BRI_DATA.slice(0, 7 - built.length), ...built]
+          : built;
+
+        setRiskData(padded.slice(-7));
+      } catch (err) {
+        console.error(err);
+        setRiskData(SEED_BRI_DATA);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBRI();
   }, [refreshTrigger]);
 
   const getRiskStyle = (score: number) => {
@@ -28,7 +99,7 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger }: Bu
       if (score === 2) return 'bg-white border-2 border-blue-700 text-blue-800 font-bold';
       return 'bg-white border-2 border-red-700 text-red-800 font-bold';
     }
-    
+
     // Nature-inspired palettes
     if (score === 1) {
       return 'bg-[#EAEFE9] border-[#C3D2C1] text-[#2F4F2F] hover:bg-[#DEE8DD]';
@@ -45,8 +116,12 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger }: Bu
     return 'Elevated Risk';
   };
 
+  const averageScore = riskData.length > 0
+    ? (riskData.reduce((sum, d) => sum + d.score, 0) / riskData.length).toFixed(1)
+    : '—';
+
   return (
-    <section 
+    <section
       className={`p-6 bg-white rounded-2xl border focus-dimming-card shadow-xs ${
         highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
       }`}
@@ -71,7 +146,7 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger }: Bu
 
             {/* Information Tooltip overlay */}
             {showTooltip && (
-              <div 
+              <div
                 className={`absolute left-0 mt-2.5 w-72 p-4 rounded-xl border bg-white shadow-xl text-xs z-20 text-neutral-600 leading-relaxed ${
                   highContrast ? 'border-black text-black font-bold' : 'border-neutral-200'
                 }`}
@@ -115,36 +190,46 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger }: Bu
       </div>
 
       {/* Heatmap Grid */}
-      <div className="grid grid-cols-7 gap-3 mb-4" role="region" aria-label="7-Day heat calendar">
-        {riskData.map((day) => {
-          const isToday = day.date === 'Sun'; // Mocking today as Sunday for visualization
-          
-          return (
-            <div
-              key={day.date}
-              className="flex flex-col items-center"
-              onMouseEnter={() => setHoveredDay(day.date)}
-              onMouseLeave={() => setHoveredDay(null)}
-            >
-              <span className={`text-[10px] font-bold mb-2 ${
-                isToday ? 'text-teal-600 font-extrabold underline decoration-2' : 'text-neutral-400'
-              }`}>
-                {day.date}
-                {isToday && ' (Today)'}
-              </span>
-              
+      {isLoading ? (
+        <div className="h-24 flex items-center justify-center mb-4">
+          <div className="flex gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-7 gap-3 mb-4" role="region" aria-label="7-Day heat calendar">
+          {riskData.map((day) => {
+            const isToday = day.date === DAY_LABELS[new Date().getDay()];
+
+            return (
               <div
-                tabIndex={0}
-                className={`w-full aspect-square rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all duration-200 outline-none focus:ring-2 focus:ring-teal-500 ${getRiskStyle(day.score)}`}
-                aria-label={`Risk for ${day.date}: ${getRiskName(day.score)}`}
+                key={day.date}
+                className="flex flex-col items-center"
+                onMouseEnter={() => setHoveredDay(day.date)}
+                onMouseLeave={() => setHoveredDay(null)}
               >
-                {/* Score Number Display */}
-                <span className="text-sm font-bold">{day.score}</span>
+                <span className={`text-[10px] font-bold mb-2 ${
+                  isToday ? 'text-teal-600 font-extrabold underline decoration-2' : 'text-neutral-400'
+                }`}>
+                  {day.date}
+                  {isToday && ' (Today)'}
+                </span>
+
+                <div
+                  tabIndex={0}
+                  className={`w-full aspect-square rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all duration-200 outline-none focus:ring-2 focus:ring-teal-500 ${getRiskStyle(day.score)}`}
+                  aria-label={`Risk for ${day.date}: ${getRiskName(day.score)}`}
+                >
+                  {/* Score Number Display */}
+                  <span className="text-sm font-bold">{day.score}</span>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Dynamic Summary Card */}
       <div className={`p-3.5 rounded-xl border bg-neutral-50/50 flex items-center justify-between text-xs text-neutral-600 ${
@@ -153,9 +238,9 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger }: Bu
         <div className="flex items-center gap-2">
           <Shield className="h-4.5 w-4.5 text-teal-600 shrink-0" />
           <span>
-            {hoveredDay 
+            {hoveredDay
               ? `Day selected: ${hoveredDay} — ${getRiskName(riskData.find(d => d.date === hoveredDay)?.score || 1)}`
-              : "7-day average score: 1.7 (Moderate Risk). Safe disconnect checks active."
+              : `7-day average score: ${averageScore}. Safe disconnect checks active.`
             }
           </span>
         </div>

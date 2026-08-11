@@ -2,56 +2,144 @@
 
 import React, { useState, useEffect } from 'react';
 import { Award, Search, Heart, Plus, Send, X } from 'lucide-react';
-import { PulseDB, KudosRecord } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+type KudosPost = Database['public']['Tables']['kudos_posts']['Row'];
+type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+
+// Extended type for rendering
+interface KudosWithProfiles extends KudosPost {
+  sender_name: string;
+  recipient_name: string;
+}
 
 export default function KudosFeed() {
   const { highContrast } = useAccessibility();
-  const [kudosList, setKudosList] = useState<KudosRecord[]>([]);
+  const [kudosList, setKudosList] = useState<KudosWithProfiles[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('All');
   
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Composers state
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [recipient, setRecipient] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recipient, setRecipient] = useState(''); // UUID or name fallback
   const [category, setCategory] = useState<string>('Gratitude');
   const [customCategory, setCustomCategory] = useState('');
   const [message, setMessage] = useState('');
-  const [sender, setSender] = useState('');
-  const [currentUser, setCurrentUser] = useState('anonymous');
+  const [senderName, setSenderName] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setKudosList(PulseDB.getKudos());
-      if (typeof window !== 'undefined') {
-        const user = localStorage.getItem('pulse-current-user') || 'anonymous';
-        setCurrentUser(user);
+    let channel: any;
+
+    const initFetch = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUser(user);
+
+        // Fetch all active profiles to map UUIDs to names
+        const { data: profileData } = await supabase.from('user_profiles').select('id, full_name');
+        const profileMap: Record<string, string> = {};
+        if (profileData) {
+          profileData.forEach(p => {
+            profileMap[p.id] = p.full_name;
+          });
+        }
+        setProfiles(profileMap);
+
+        // Fetch kudos posts
+        await fetchKudos(profileMap);
+
+        channel = supabase
+          .channel(`kudos-feed-${Date.now()}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'kudos_posts' }, () => {
+            fetchKudos(profileMap); // Re-fetch all to ensure profiles map correctly
+          })
+          .subscribe();
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load Kudos feed.');
+      } finally {
+        setIsLoading(false);
       }
-    }, 0);
-    return () => clearTimeout(timer);
+    };
+
+    initFetch();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleLike = (id: string) => {
-    const updated = PulseDB.likeKudos(id, currentUser);
-    setKudosList(updated);
+  const fetchKudos = async (profileMap: Record<string, string>) => {
+    const { data: kudosData, error: fetchErr } = await supabase
+      .from('kudos_posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (fetchErr) throw fetchErr;
+
+    const mapped = (kudosData || []).map(k => ({
+      ...k,
+      sender_name: profileMap[k.sender_id] || 'Anonymous',
+      recipient_name: profileMap[k.recipient_id] || 'Unknown User'
+    }));
+
+    setKudosList(mapped);
   };
 
-  const handleSubmitKudos = (e: React.FormEvent) => {
+  const handleLike = async (id: string, currentLikes: number) => {
+    // Optimistic UI update could be added here
+    await supabase.from('kudos_posts').update({ likes_count: currentLikes + 1 }).eq('id', id);
+  };
+
+  const handleSubmitKudos = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipient.trim() || !message.trim()) return;
+    if (!message.trim()) return;
+
+    // A real app would provide a dropdown of users to select recipient_id.
+    // For this migration, we'll try to find a user by name, else fallback to a system UUID if not found,
+    // or block it. Since UI wasn't changed to a select dropdown, let's look up the UUID by name:
+    const matchedRecipient = Object.keys(profiles).find(
+      key => profiles[key].toLowerCase() === recipient.toLowerCase()
+    );
+
+    if (!matchedRecipient) {
+      alert("Recipient not found in directory. Please enter an exact full name.");
+      return;
+    }
 
     const finalCategory = category === 'Other' ? (customCategory.trim() || 'Other') : category;
-    const senderVal = sender.trim() ? sender.trim() : 'Anonymous';
-    PulseDB.addKudos(recipient, message, finalCategory, senderVal);
     
-    // Refresh list and reset form
-    setKudosList(PulseDB.getKudos());
-    setRecipient('');
-    setMessage('');
-    setSender('');
-    setCustomCategory('');
-    setCategory('Gratitude');
-    setIsComposerOpen(false);
+    setIsSubmitting(true);
+    try {
+      await supabase.from('kudos_posts').insert({
+        sender_id: currentUser?.id,
+        recipient_id: matchedRecipient,
+        message: message.trim(),
+        category: finalCategory as any, // Cast to enum
+        likes_count: 0
+      });
+      
+      setRecipient('');
+      setMessage('');
+      setSenderName('');
+      setCustomCategory('');
+      setCategory('Gratitude');
+      setIsComposerOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send Kudos');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getCategoryColor = (cat: string) => {
@@ -72,9 +160,9 @@ export default function KudosFeed() {
   };
 
   const filteredKudos = kudosList.filter((k) => {
-    const matchesSearch = k.recipient.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          k.sender.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          k.text.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = k.recipient_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          k.sender_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          k.message.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesFilter = activeFilter === 'All' || k.category === activeFilter;
     return matchesSearch && matchesFilter;
@@ -138,13 +226,27 @@ export default function KudosFeed() {
       </div>
 
       {/* Kudos Grid */}
-      {filteredKudos.length === 0 ? (
-        <div className={`p-12 text-center bg-white rounded-2xl border ${
+      {isLoading ? (
+        <div className="p-12 flex justify-center">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      ) : error ? (
+        <div className="p-12 text-center text-xs text-red-500">{error}</div>
+      ) : filteredKudos.length === 0 ? (
+        <div className={`py-16 px-6 text-center bg-white rounded-2xl border ${
           highContrast ? 'border-black' : 'border-[#f1f0ea]'
         }`}>
-          <Award className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
-          <p className="text-xs font-semibold text-neutral-700">No Kudos matching filters</p>
-          <p className="text-[11px] text-neutral-400 mt-1">Be the first to recognition a teammate today!</p>
+          <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4 border border-amber-100">
+            <Award className="h-6 w-6 text-amber-500" />
+          </div>
+          <p className="text-xs font-bold text-neutral-700">Let's spread some positivity!</p>
+          <p className="text-[11px] text-neutral-400 mt-1 max-w-sm mx-auto leading-relaxed">
+            Take a moment to recognize a teammate whose hard work made your day easier. Your appreciation means more than you think.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -159,8 +261,8 @@ export default function KudosFeed() {
                 {/* Header */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
-                    <span className="text-xs font-bold text-neutral-800">To: {kudos.recipient}</span>
-                    <span className="text-[10px] text-neutral-400 block">From: {kudos.sender}</span>
+                    <span className="text-xs font-bold text-neutral-800">To: {kudos.recipient_name}</span>
+                    <span className="text-[10px] text-neutral-400 block">From: {kudos.sender_name}</span>
                   </div>
                   <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full border ${getCategoryColor(kudos.category)}`}>
                     {kudos.category}
@@ -169,30 +271,21 @@ export default function KudosFeed() {
 
                 {/* Content Message */}
                 <p className="text-xs text-neutral-600 leading-relaxed italic">
-                  &ldquo;{kudos.text}&rdquo;
+                  &ldquo;{kudos.message}&rdquo;
                 </p>
               </div>
 
               {/* Action bar */}
               <div className="flex items-center justify-between border-t pt-3.5 mt-4 border-neutral-100 text-[10px] text-neutral-400 font-medium">
-                <span>{kudos.date}</span>
-                {(() => {
-                  const isLiked = kudos.likedBy?.includes(currentUser);
-                  return (
-                    <button
-                      onClick={() => handleLike(kudos.id)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                        isLiked ? 'text-teal-600 font-bold' : ''
-                      }`}
-                      aria-label={`Like this kudos. Current likes: ${kudos.likes}`}
-                    >
-                      <Heart className={`h-3.5 w-3.5 ${
-                        isLiked ? 'fill-teal-600 text-teal-600' : 'text-neutral-400'
-                      }`} />
-                      <span>{kudos.likes} {kudos.likes === 1 ? 'Like' : 'Likes'}</span>
-                    </button>
-                  );
-                })()}
+                <span>{new Date(kudos.created_at).toLocaleDateString()}</span>
+                <button
+                  onClick={() => handleLike(kudos.id, kudos.likes_count)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-teal-500`}
+                  aria-label={`Like this kudos. Current likes: ${kudos.likes_count}`}
+                >
+                  <Heart className="h-3.5 w-3.5 text-neutral-400 hover:text-teal-600 hover:fill-teal-600" />
+                  <span>{kudos.likes_count} {kudos.likes_count === 1 ? 'Like' : 'Likes'}</span>
+                </button>
               </div>
             </article>
           ))}
@@ -233,7 +326,7 @@ export default function KudosFeed() {
                   id="kudos-recipient"
                   type="text"
                   required
-                  placeholder="e.g. Sarah Jenkins"
+                  placeholder="e.g. Sarah Jenkins (Must match exact directory name)"
                   value={recipient}
                   onChange={(e) => setRecipient(e.target.value)}
                   className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
@@ -274,10 +367,11 @@ export default function KudosFeed() {
                   <input
                     id="kudos-sender"
                     type="text"
-                    placeholder="Defaults to Anonymous"
-                    value={sender}
-                    onChange={(e) => setSender(e.target.value)}
-                    className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                    disabled
+                    placeholder="Auto-filled from auth profile"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    className={`w-full p-2.5 rounded-lg border text-xs bg-neutral-100 focus:outline-none font-semibold ${
                       highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
                   />
@@ -330,10 +424,11 @@ export default function KudosFeed() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 disabled:opacity-60"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  <span>Send Kudos</span>
+                  <span>{isSubmitting ? 'Sending...' : 'Send Kudos'}</span>
                 </button>
               </div>
             </form>

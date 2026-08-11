@@ -2,31 +2,83 @@
 
 import React, { useState, useEffect } from 'react';
 import { Coffee, Calendar, RefreshCw, AlertCircle, CheckCircle2, Sliders } from 'lucide-react';
-import { PulseDB, CoffeeRouletteState } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+const CONVERSATION_STARTERS = [
+  'How are you managing off-hours deployment syncs?',
+  'What are your tips for keeping zoom meetings short?',
+  'Which Support Circle do you check the most?'
+];
 
 export default function CoffeeRoulette() {
   const { highContrast } = useAccessibility();
-  const [rouletteState, setRouletteState] = useState<CoffeeRouletteState | null>(null);
+  
+  const [pairedName, setPairedName] = useState<string | null>(null);
+  const [pairedRole, setPairedRole] = useState<string | null>(null);
+  const [pairedAvatar, setPairedAvatar] = useState<string | null>(null);
+  
+  const [isPaused, setIsPaused] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setRouletteState(PulseDB.getCoffeeRoulette());
-    }, 0);
-    return () => clearTimeout(timer);
+    // Load local pause state
+    const savedPause = localStorage.getItem('pulse-coffee-roulette-paused');
+    if (savedPause === 'true') setIsPaused(true);
+
+    const fetchPairing = async () => {
+      setInitialLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Fetch latest pairing for this user
+        const { data: pairings, error } = await supabase
+          .from('coffee_roulette_pairings')
+          .select('*')
+          .or(`user_1_id.eq.${user.id},user_2_id.eq.${user.id}`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+
+        if (pairings && pairings.length > 0) {
+          const p = pairings[0];
+          const otherUserId = p.user_1_id === user.id ? p.user_2_id : p.user_1_id;
+
+          // Fetch other user's profile
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('full_name, job_title, avatar')
+            .eq('id', otherUserId)
+            .single();
+
+          if (profile) {
+            setPairedName(profile.full_name);
+            setPairedRole(profile.job_title ?? 'Employee');
+            setPairedAvatar(profile.avatar ?? profile.full_name.substring(0, 2).toUpperCase());
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    fetchPairing();
   }, []);
 
   const handleTogglePause = () => {
-    if (!rouletteState) return;
-    const nextPaused = !rouletteState.paused;
-    const updated = PulseDB.updateCoffeeRoulette({ paused: nextPaused });
-    setRouletteState(updated);
+    const nextPaused = !isPaused;
+    setIsPaused(nextPaused);
+    localStorage.setItem('pulse-coffee-roulette-paused', String(nextPaused));
   };
 
   const handleScheduleChat = () => {
-    if (!rouletteState) return;
+    if (isPaused || !pairedName) return;
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
@@ -35,30 +87,27 @@ export default function CoffeeRoulette() {
     }, 1200);
   };
 
-  const handleRerollPairing = () => {
-    // Simulate a recalculation / re-pairing
+  const handleRerollPairing = async () => {
     setLoading(true);
+    // In a real app, this would call a backend function to re-roll and create a new row
+    // in coffee_roulette_pairings. We'll simulate it by assigning a hardcoded mock for demonstration
+    // since we cannot reliably find another unmatched user safely entirely on the frontend.
     setTimeout(() => {
       setLoading(false);
-      const updated = PulseDB.updateCoffeeRoulette({
-        pairedName: 'James Miller',
-        pairedRole: 'Staff Infrastructure Architect',
-        pairedAvatar: 'JM',
-        conversationStarters: [
-          'How are you managing off-hours deployment syncs?',
-          'What are your tips for keeping zoom meetings short?',
-          'Which Support Circle do you check the most?'
-        ],
-        schedulingLink: 'https://calendly.com/axionhr-coffee-roulette/james'
-      });
-      setRouletteState(updated);
+      setPairedName('James Miller');
+      setPairedRole('Staff Infrastructure Architect');
+      setPairedAvatar('JM');
     }, 1000);
   };
 
-  if (!rouletteState) {
+  if (initialLoading) {
     return (
-      <div className="p-8 text-center text-xs text-neutral-400">
-        Loading Coffee Roulette pairing...
+      <div className="p-8 flex items-center justify-center">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
       </div>
     );
   }
@@ -87,21 +136,21 @@ export default function CoffeeRoulette() {
           <button
             id="roulette-pause-toggle"
             role="switch"
-            aria-checked={!rouletteState.paused}
+            aria-checked={!isPaused}
             onClick={handleTogglePause}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              !rouletteState.paused ? 'bg-teal-600' : 'bg-neutral-200'
+              !isPaused ? 'bg-teal-600' : 'bg-neutral-200'
             }`}
           >
             <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-              !rouletteState.paused ? 'translate-x-4' : 'translate-x-0'
+              !isPaused ? 'translate-x-4' : 'translate-x-0'
             }`} />
           </button>
         </div>
       </div>
 
       {/* Main card */}
-      {rouletteState.paused ? (
+      {isPaused ? (
         <div className={`p-12 text-center bg-white rounded-2xl border ${
           highContrast ? 'border-black' : 'border-[#f1f0ea]'
         }`}>
@@ -110,6 +159,14 @@ export default function CoffeeRoulette() {
           <p className="text-[11px] text-neutral-400 mt-1 max-w-xs mx-auto leading-normal">
             You are temporarily excluded from the pairing pool. Toggle active pairing back on to participate in the next round.
           </p>
+        </div>
+      ) : !pairedName ? (
+        <div className={`p-12 text-center bg-white rounded-2xl border ${
+          highContrast ? 'border-black' : 'border-[#f1f0ea]'
+        }`}>
+          <Coffee className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
+          <p className="text-xs font-semibold text-neutral-700">No active pairing found</p>
+          <p className="text-[11px] text-neutral-400 mt-1">Wait until the next matching cycle on Monday to receive a partner!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -124,16 +181,16 @@ export default function CoffeeRoulette() {
 
               {/* Avatar circle */}
               <div className="h-20 w-20 rounded-full bg-teal-50 text-teal-700 border-2 border-teal-200 shadow-md flex items-center justify-center text-2xl font-bold mx-auto">
-                {rouletteState.pairedAvatar}
+                {pairedAvatar}
               </div>
 
               <div>
-                <h3 className="text-sm font-bold text-neutral-800 leading-snug">{rouletteState.pairedName}</h3>
-                <span className="text-[10px] text-neutral-400 font-semibold">{rouletteState.pairedRole}</span>
+                <h3 className="text-sm font-bold text-neutral-800 leading-snug">{pairedName}</h3>
+                <span className="text-[10px] text-neutral-400 font-semibold">{pairedRole}</span>
               </div>
 
               <div className="p-2.5 rounded-lg bg-neutral-50/50 border border-neutral-100 text-[10px] text-neutral-500 leading-normal">
-                Matched on: <strong>Aug 8, 2026</strong> <br />
+                Matched on: <strong>{new Date().toLocaleDateString()}</strong> <br />
                 Expires in: <strong>6 days</strong>
               </div>
             </div>
@@ -150,7 +207,7 @@ export default function CoffeeRoulette() {
                 }`}
               >
                 <Calendar className="h-4.5 w-4.5" />
-                <span>{loading ? "Scheduling..." : "Schedule Chat"}</span>
+                <span>{loading ? 'Scheduling...' : 'Schedule Chat'}</span>
               </button>
 
               <button
@@ -178,7 +235,7 @@ export default function CoffeeRoulette() {
               </p>
 
               <div className="space-y-3 pt-2" role="region" aria-label="Conversation starters list">
-                {rouletteState.conversationStarters.map((starter, idx) => (
+                {CONVERSATION_STARTERS.map((starter, idx) => (
                   <div 
                     key={idx}
                     className={`p-3.5 rounded-xl border bg-neutral-50/40 text-xs font-semibold leading-relaxed text-neutral-700 hover:bg-neutral-50 transition ${

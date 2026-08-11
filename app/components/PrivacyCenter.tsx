@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  Download, 
-  Trash2, 
-  EyeOff, 
-  Lock, 
+import {
+  ShieldCheck,
+  Download,
+  Trash2,
+  EyeOff,
+  Lock,
   Database,
   Info,
   AlertTriangle,
   Check
 } from 'lucide-react';
-import { PulseDB } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
 import { useAccessibility } from '../context/AccessibilityContext';
 
 export default function PrivacyCenter() {
@@ -20,64 +20,117 @@ export default function PrivacyCenter() {
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [purgeSuccess, setPurgeSuccess] = useState(false);
   const [cvGlobalDisabled, setCvGlobalDisabled] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
+  // Load org-wide camera telemetry status from Supabase admin_configs
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const config = PulseDB.getAdminConfig();
-      setCvGlobalDisabled(config.webcamCVGlobalDisabled || false);
-    }, 0);
-
-    const handleCvChange = () => {
-      const config = PulseDB.getAdminConfig();
-      setCvGlobalDisabled(config.webcamCVGlobalDisabled || false);
-      if (config.webcamCVGlobalDisabled) {
-        localStorage.setItem('pulse-cv-active', 'false');
+    const fetchCvStatus = async () => {
+      const { data } = await supabase
+        .from('admin_configs')
+        .select('webcam_cv_global_disabled')
+        .single();
+      if (data) {
+        setCvGlobalDisabled(data.webcam_cv_global_disabled);
       }
     };
-    window.addEventListener('pulse-cv-global-change', handleCvChange);
+
+    fetchCvStatus();
+
+    // Subscribe to real-time changes on admin_configs so the CV banner
+    // updates immediately if an admin toggles the org-wide control
+    const channel = supabase
+      .channel('admin-cv-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'admin_configs' },
+        (payload) => {
+          const newConfig = payload.new as { webcam_cv_global_disabled: boolean };
+          if (typeof newConfig.webcam_cv_global_disabled === 'boolean') {
+            setCvGlobalDisabled(newConfig.webcam_cv_global_disabled);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('pulse-cv-global-change', handleCvChange);
+      supabase.removeChannel(channel);
     };
   }, []);
 
-  const handleExportData = () => {
-    // Collect all data from localStorage
-    const data = {
-      sentimentLogs: PulseDB.getSentimentLogs(),
-      burnoutIndex: PulseDB.getBurnoutRiskIndex(),
-      outboxMessages: PulseDB.getOutboxMessages(),
-      kudos: PulseDB.getKudos(),
-      supportMessages: PulseDB.getSupportMessages(),
-      accessibilityPreferences: {
-        dyslexic: localStorage.getItem('pulse-dyslexic') === 'true',
-        ruler: localStorage.getItem('pulse-ruler') === 'true',
-        contrast: localStorage.getItem('pulse-contrast') === 'true',
-        scale: localStorage.getItem('pulse-font-scale') || 'normal',
-      },
-      telemetrySettings: {
-        computerVisionActive: localStorage.getItem('pulse-cv-active') !== 'false'
-      },
-      exportTimestamp: new Date().toISOString()
-    };
+  const handleExportData = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated.');
 
-    // Create JSON download link
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(data, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `pulse-wbg-telemetry-export-${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+      // Fetch all private-plane data for the current user in parallel
+      const [
+        { data: moodLogs },
+        { data: outboxMessages },
+        { data: kudosPosts },
+        { data: supportMessages },
+        { data: briShiftRecords },
+        { data: profile },
+      ] = await Promise.all([
+        supabase.from('mood_logs').select('*').eq('user_id', user.id),
+        supabase.from('outbox_messages').select('*').eq('sender_id', user.id),
+        supabase.from('kudos_posts').select('*').eq('sender_id', user.id),
+        supabase.from('support_circle_messages').select('*').eq('user_id', user.id),
+        supabase.from('bri_shift_records').select('*').eq('user_id', user.id),
+        supabase.from('user_profiles').select('reading_ruler_enabled, dyslexic_font_enabled, high_contrast_enabled, share_bri_with_manager, camera_telemetry_consented').eq('id', user.id).single(),
+      ]);
+
+      const exportPayload = {
+        moodLogs: moodLogs ?? [],
+        outboxMessages: outboxMessages ?? [],
+        kudosPosts: kudosPosts ?? [],
+        supportMessages: supportMessages ?? [],
+        briShiftRecords: briShiftRecords ?? [],
+        accessibilityPreferences: profile ?? {},
+        exportTimestamp: new Date().toISOString(),
+      };
+
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(exportPayload, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', jsonString);
+      downloadAnchor.setAttribute('download', `pulse-wbg-telemetry-export-${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Export failed. Please try again.';
+      setExportError(message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handlePurgeData = () => {
-    setPurgeSuccess(true);
-    setTimeout(() => {
-      PulseDB.purgeUserData();
-    }, 2000);
+  const handlePurgeData = async () => {
+    setIsPurging(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated.');
+
+      // Mark the account as pending deletion approval — HR will review the request
+      // per PRD v3.0 §5.16 (Deletion Request Review Queue)
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ status: 'pending_deletion_approval' })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setPurgeSuccess(true);
+    } catch (err: unknown) {
+      console.error('Purge request failed:', err);
+    } finally {
+      setIsPurging(false);
+    }
   };
 
   return (
@@ -149,29 +202,33 @@ export default function PrivacyCenter() {
       }`}>
         <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
           <Database className="h-5 w-5 text-teal-600" />
-          <h3 className="text-xs font-bold text-neutral-800">Download & Delete Your Data</h3>
+          <h3 className="text-xs font-bold text-neutral-800">Download &amp; Delete Your Data</h3>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="block text-xs font-bold text-neutral-700">Export & Purge Controls</span>
+            <span className="block text-xs font-bold text-neutral-700">Export &amp; Purge Controls</span>
             <p className="text-[11px] text-neutral-400 leading-relaxed max-w-xl">
               You own your information. You can download a copy of all your check-ins and settings as a file, or permanently wipe your profile from this computer.
             </p>
+            {exportError && (
+              <p className="text-[11px] text-red-500 font-semibold mt-1">{exportError}</p>
+            )}
           </div>
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2.5">
             <button
               onClick={handleExportData}
-              className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+              disabled={isExporting}
+              className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${
                 highContrast
                   ? 'bg-black text-white hover:bg-neutral-800 border-2 border-black'
                   : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
               }`}
             >
               <Download className="h-4.5 w-4.5" />
-              <span>Download My Data (JSON File)</span>
+              <span>{isExporting ? 'Exporting...' : 'Download My Data (JSON File)'}</span>
             </button>
 
             <button
@@ -187,7 +244,7 @@ export default function PrivacyCenter() {
 
       {/* Purge Profile Warning dialog */}
       {showPurgeConfirm && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/40 backdrop-blur-xs animate-fade-in"
           role="dialog"
           aria-modal="true"
@@ -217,18 +274,18 @@ export default function PrivacyCenter() {
                   <div className="h-12 w-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
                     <Check className="h-6 w-6 stroke-[3.0]" />
                   </div>
-                  <p className="font-bold text-neutral-800">Data Deleted Successfully</p>
-                  <p className="text-[10px] text-neutral-400">Clearing browser memory and resetting database...</p>
+                  <p className="font-bold text-neutral-800">Deletion Request Submitted</p>
+                  <p className="text-[10px] text-neutral-400">Your request has been forwarded to HR for review. Your account will be permanently deleted after the approval and grace period.</p>
                 </div>
               ) : (
                 <>
                   <p>
-                    You are requesting to permanently delete your mood logs, saved kudos, and settings from this browser.
+                    You are requesting to permanently delete your mood logs, saved kudos, and settings from this platform.
                   </p>
                   <div className="p-3 rounded-lg bg-red-50/50 border border-red-100/50 text-[10px] text-neutral-600 flex items-start gap-2">
                     <Info className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
                     <p>
-                      Deleting your data will reset your Burnout Risk Index, clear any pending emails scheduled for after-hours, and erase your account data on this device.
+                      Deleting your data will reset your Burnout Risk Index, clear any pending messages scheduled for after-hours, and erase your account data. Your request will be reviewed by HR before permanent deletion is executed.
                     </p>
                   </div>
                   <p className="pt-2">Click below to confirm deletion request.</p>
@@ -247,10 +304,11 @@ export default function PrivacyCenter() {
                 </button>
                 <button
                   onClick={handlePurgeData}
-                  className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1.5"
+                  disabled={isPurging}
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span>Delete All Data</span>
+                  <span>{isPurging ? 'Submitting...' : 'Delete All Data'}</span>
                 </button>
               </div>
             )}
