@@ -17,10 +17,10 @@ interface UIAuditLogEntry extends AuditLogEntry {
 
 export default function AdminConsole() {
   const { highContrast } = useAccessibility();
-  
+
   const [config, setConfig] = useState<AdminConfig | null>(null);
   const [secConfigRowId, setSecConfigRowId] = useState<string | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -67,8 +67,9 @@ export default function AdminConsole() {
         .select('role')
         .eq('id', user.id)
         .single();
-      
-      if (!profile || (profile.role !== 'Admin' && profile.role !== 'IT')) {
+
+      const role = (profile?.role || '').toLowerCase();
+      if (!profile || (role !== 'admin' && role !== 'it')) {
         throw new Error('Access Denied: You do not have the required Administrator permissions.');
       }
 
@@ -118,7 +119,7 @@ export default function AdminConsole() {
       if (profilesData && profilesData.length > 0) {
         const total = profilesData.length;
         const cvCount = profilesData.filter(p => p.camera_telemetry_consented).length;
-        
+
         setOptIn({
           webcamCV: Math.round((cvCount / total) * 100),
           messagingSync: 0,
@@ -144,12 +145,12 @@ export default function AdminConsole() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (logsData) {
       // Fetch corresponding user names
       const actorIds = [...new Set(logsData.map(l => l.actor_id))];
       const { data: actorsData } = await supabase.from('user_profiles').select('id, full_name').in('id', actorIds);
-      
+
       const actorMap: Record<string, string> = {};
       if (actorsData) {
         actorsData.forEach(a => { actorMap[a.id] = a.full_name; });
@@ -195,9 +196,9 @@ export default function AdminConsole() {
         .eq('id', config.id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       if (updated) {
         setConfig(updated);
         await logAuditAction('Updated Org-Wide System Preferences', 'admin_configs');
@@ -222,7 +223,7 @@ export default function AdminConsole() {
         .eq('id', config.id)
         .select()
         .single();
-      
+
       if (error) throw error;
 
       if (updated) {
@@ -248,7 +249,7 @@ export default function AdminConsole() {
           kms_key_url: kmsKeyUrl
         })
         .eq('id', secConfigRowId);
-      
+
       if (error) throw error;
 
       await logAuditAction(`Security config updated: SSO=${ssoProvider}, SCIM=${scimEnabled ? 'on' : 'off'}, Residency=${dataResidency}`, 'security_configs');
@@ -264,15 +265,15 @@ export default function AdminConsole() {
     if (!config) return;
     const next = !cvGlobalDisabled;
     setCvGlobalDisabled(next); // Optimistic UI update
-    
+
     try {
       const { error } = await supabase
         .from('admin_configs')
         .update({ webcam_cv_global_disabled: next })
         .eq('id', config.id);
-      
+
       if (error) throw error;
-      
+
       await logAuditAction(`Webcam CV ${next ? 'disabled' : 'enabled'} org-wide.`, 'admin_configs.webcam_cv_global_disabled');
       window.dispatchEvent(new Event('pulse-cv-global-change'));
     } catch (err) {
@@ -479,8 +480,8 @@ export default function AdminConsole() {
               type="submit"
               disabled={isSaving}
               className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
-                  ? 'bg-black text-white hover:bg-neutral-800'
-                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                ? 'bg-black text-white hover:bg-neutral-800'
+                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
                 }`}
             >
               <Save className="h-4 w-4" />
@@ -499,8 +500,8 @@ export default function AdminConsole() {
 
             {/* Red Octagon Shield */}
             <div className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto border-2 ${config.emergency_kill_switch
-                ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
-                : 'bg-neutral-50 text-neutral-400 border-neutral-200'
+              ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
+              : 'bg-neutral-50 text-neutral-400 border-neutral-200'
               }`}>
               <AlertOctagon className="h-10 w-10 stroke-[2.2]" />
             </div>
@@ -522,8 +523,8 @@ export default function AdminConsole() {
           <button
             onClick={handleToggleSystemPaused}
             className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 mt-6 ${config.emergency_kill_switch
-                ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
-                : 'bg-red-600 hover:bg-red-750 text-white border-transparent shadow-md'
+              ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
+              : 'bg-red-600 hover:bg-red-700 text-white border-transparent shadow-md'
               }`}
           >
             <ShieldAlert className="h-4.5 w-4.5" />
@@ -638,9 +639,8 @@ export default function AdminConsole() {
           )}
           <button
             onClick={handleSaveSecurityConfig}
-            className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-            }`}
+            className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+              }`}
           >
             <Save className="h-4 w-4" />
             <span>Save Security Config</span>
