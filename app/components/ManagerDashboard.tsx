@@ -189,9 +189,8 @@ export default function ManagerDashboard() {
   return (
     <div className="space-y-6">
       {/* Intro Header */}
-      <div className={`p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${
-        highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-      }`}>
+      <div className={`p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        }`}>
         <div className="space-y-1.5">
           <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
             <Users className="h-5.5 w-5.5 text-teal-600" />
@@ -210,21 +209,19 @@ export default function ManagerDashboard() {
           <div className="inline-flex rounded-lg p-0.5 bg-neutral-100 border border-neutral-200">
             <button
               onClick={() => setResponseCount(3)}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                responseCount < kanonFloor
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${responseCount < kanonFloor
                   ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80'
                   : 'text-neutral-500 hover:text-neutral-800'
-              }`}
+                }`}
             >
               Small ({responseCount < kanonFloor ? responseCount : 3})
             </button>
             <button
               onClick={() => setResponseCount(kanonFloor + 2)}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                responseCount >= kanonFloor
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${responseCount >= kanonFloor
                   ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80'
                   : 'text-neutral-500 hover:text-neutral-800'
-              }`}
+                }`}
             >
               Large ({kanonFloor + 2})
             </button>
@@ -235,18 +232,16 @@ export default function ManagerDashboard() {
       {/* Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Team Workload & Wellbeing Trend (2 cols) */}
-        <div className={`p-6 bg-white rounded-2xl border relative overflow-hidden lg:col-span-2 min-h-[300px] flex flex-col justify-between ${
-          highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-        }`}>
+        <div className={`p-6 bg-white rounded-2xl border relative overflow-hidden lg:col-span-2 min-h-[300px] flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+          }`}>
           <div>
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">
               Team Burnout Risk Index (Weekly Average)
             </span>
 
             {/* Chart area */}
-            <div className={`h-48 w-full flex items-end justify-between px-4 pb-4 border-b border-neutral-100 transition-all duration-500 ${
-              responseCount < kanonFloor ? 'blur-md pointer-events-none select-none opacity-40' : 'blur-none opacity-100'
-            }`}>
+            <div className={`h-48 w-full flex items-end justify-between px-4 pb-4 border-b border-neutral-100 transition-all duration-500 ${responseCount < kanonFloor ? 'blur-md pointer-events-none select-none opacity-40' : 'blur-none opacity-100'
+              }`}>
               {/* Simulated aggregate bars — never individual data */}
               {[
                 { date: 'Mon', val: 38 },
@@ -289,9 +284,8 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Right-to-Disconnect adherence (1 col) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${
-          highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-        }`}>
+        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+          }`}>
           <div className="space-y-4">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
               Right-to-Disconnect Adherence Rate
@@ -337,9 +331,8 @@ export default function ManagerDashboard() {
       {/* Account Provisioning & Employee Directory Section */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Onboarding Form Card (1 col) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${
-          highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-        }`}>
+        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+          }`}>
           <form onSubmit={handleProvision} className="space-y-4">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
               Employee Account Provisioning
@@ -362,9 +355,8 @@ export default function ManagerDashboard() {
                   placeholder="e.g. Sarah Connor"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                    }`}
                 />
               </div>
 
@@ -380,9 +372,8 @@ export default function ManagerDashboard() {
                   placeholder="e.g. UX Engineer"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                    }`}
                 />
               </div>
 
@@ -398,9 +389,8 @@ export default function ManagerDashboard() {
                   placeholder="e.g. sarah@axionhr.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                    }`}
                 />
               </div>
 
@@ -416,16 +406,15 @@ export default function ManagerDashboard() {
                   placeholder="e.g. Welcome123!"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                    }`}
                 />
               </div>
             </div>
 
             {/* Notifications */}
             {errorMessage && (
-              <div className="p-2.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-750 flex items-start gap-1.5 font-semibold leading-normal animate-fade-in">
+              <div className="p-2.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-700 flex items-start gap-1.5 font-semibold leading-normal animate-fade-in">
                 <ShieldAlert className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
               </div>
@@ -441,11 +430,10 @@ export default function ManagerDashboard() {
             <button
               type="submit"
               disabled={isProvisioning}
-              className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all mt-4 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${
-                highContrast
+              className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all mt-4 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${highContrast
                   ? 'bg-black text-white hover:bg-neutral-800'
                   : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-              }`}
+                }`}
             >
               <Plus className="h-4.5 w-4.5" />
               <span>{isProvisioning ? 'Provisioning...' : 'Provision Profile'}</span>
@@ -454,9 +442,8 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Directory List Card (2 cols) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between xl:col-span-2 ${
-          highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-        }`}>
+        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between xl:col-span-2 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+          }`}>
           <div className="space-y-4 w-full">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
               Active Employee Directory
@@ -494,13 +481,12 @@ export default function ManagerDashboard() {
                         <td className="py-3 text-neutral-500 font-semibold">{user.job_title ?? '—'}</td>
                         <td className="py-3 text-neutral-400 font-semibold">{user.email}</td>
                         <td className="py-3 text-right">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            user.role === 'admin'
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${user.role === 'admin'
                               ? 'bg-neutral-100 text-neutral-600'
                               : user.role === 'manager'
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'bg-teal-50 text-teal-700'
-                          }`}>
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-teal-50 text-teal-700'
+                            }`}>
                             {user.role}
                           </span>
                         </td>
@@ -519,9 +505,8 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Suggested Icebreakers / Prompts */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-4 ${
-        highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-      }`}>
+      <div className={`p-6 bg-white rounded-2xl border space-y-4 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        }`}>
         <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
           Contextual Manager Conversation Starters
         </span>
@@ -530,9 +515,8 @@ export default function ManagerDashboard() {
           {prompts.map((p, idx) => (
             <div
               key={idx}
-              className={`p-4 rounded-xl border bg-neutral-50/40 text-xs flex flex-col justify-between gap-3 hover:bg-neutral-50 transition ${
-                highContrast ? 'border-black' : 'border-neutral-100'
-              }`}
+              className={`p-4 rounded-xl border bg-neutral-50/40 text-xs flex flex-col justify-between gap-3 hover:bg-neutral-50 transition ${highContrast ? 'border-black' : 'border-neutral-100'
+                }`}
             >
               <div className="space-y-2">
                 <span className="px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-100 rounded text-[9px] font-bold uppercase tracking-wider self-start inline-block">

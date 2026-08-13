@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Key, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video } from 'lucide-react';
+import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Key, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video, Users, UserCheck, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
@@ -17,10 +17,10 @@ interface UIAuditLogEntry extends AuditLogEntry {
 
 export default function AdminConsole() {
   const { highContrast } = useAccessibility();
-  
+
   const [config, setConfig] = useState<AdminConfig | null>(null);
   const [secConfigRowId, setSecConfigRowId] = useState<string | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -52,6 +52,16 @@ export default function AdminConsole() {
   // CV global toggle
   const [cvGlobalDisabled, setCvGlobalDisabled] = useState(false);
 
+  // Admin Override Provisioning Form states
+  const [newFullName, setNewFullName] = useState('');
+  const [newJobTitle, setNewJobTitle] = useState('');
+  const [newRole, setNewRole] = useState<'employee' | 'manager' | 'admin'>('employee');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isProvisioning, setIsProvisioning] = useState(false);
+  const [provisionSuccess, setProvisionSuccess] = useState(false);
+  const [provisionError, setProvisionError] = useState('');
+
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -67,8 +77,9 @@ export default function AdminConsole() {
         .select('role')
         .eq('id', user.id)
         .single();
-      
-      if (!profile || (profile.role !== 'Admin' && profile.role !== 'IT')) {
+
+      const role = (profile?.role || '').toLowerCase();
+      if (!profile || role !== 'admin') {
         throw new Error('Access Denied: You do not have the required Administrator permissions.');
       }
 
@@ -118,7 +129,7 @@ export default function AdminConsole() {
       if (profilesData && profilesData.length > 0) {
         const total = profilesData.length;
         const cvCount = profilesData.filter(p => p.camera_telemetry_consented).length;
-        
+
         setOptIn({
           webcamCV: Math.round((cvCount / total) * 100),
           messagingSync: 0,
@@ -144,12 +155,12 @@ export default function AdminConsole() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (logsData) {
       // Fetch corresponding user names
       const actorIds = [...new Set(logsData.map(l => l.actor_id))];
       const { data: actorsData } = await supabase.from('user_profiles').select('id, full_name').in('id', actorIds);
-      
+
       const actorMap: Record<string, string> = {};
       if (actorsData) {
         actorsData.forEach(a => { actorMap[a.id] = a.full_name; });
@@ -195,9 +206,9 @@ export default function AdminConsole() {
         .eq('id', config.id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       if (updated) {
         setConfig(updated);
         await logAuditAction('Updated Org-Wide System Preferences', 'admin_configs');
@@ -222,7 +233,7 @@ export default function AdminConsole() {
         .eq('id', config.id)
         .select()
         .single();
-      
+
       if (error) throw error;
 
       if (updated) {
@@ -248,7 +259,7 @@ export default function AdminConsole() {
           kms_key_url: kmsKeyUrl
         })
         .eq('id', secConfigRowId);
-      
+
       if (error) throw error;
 
       await logAuditAction(`Security config updated: SSO=${ssoProvider}, SCIM=${scimEnabled ? 'on' : 'off'}, Residency=${dataResidency}`, 'security_configs');
@@ -264,15 +275,15 @@ export default function AdminConsole() {
     if (!config) return;
     const next = !cvGlobalDisabled;
     setCvGlobalDisabled(next); // Optimistic UI update
-    
+
     try {
       const { error } = await supabase
         .from('admin_configs')
         .update({ webcam_cv_global_disabled: next })
         .eq('id', config.id);
-      
+
       if (error) throw error;
-      
+
       await logAuditAction(`Webcam CV ${next ? 'disabled' : 'enabled'} org-wide.`, 'admin_configs.webcam_cv_global_disabled');
       window.dispatchEvent(new Event('pulse-cv-global-change'));
     } catch (err) {
@@ -309,6 +320,67 @@ export default function AdminConsole() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const handleProvision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProvisionError('');
+    setProvisionSuccess(false);
+
+    if (!newFullName || !newJobTitle || !newEmail) {
+      setProvisionError('Full Name, Job Title, and Work Email are required.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setProvisionError('A temporary password of at least 8 characters is required.');
+      return;
+    }
+
+    setIsProvisioning(true);
+    try {
+      let emailToUse = newEmail.trim();
+      if (!emailToUse.includes('@')) {
+        emailToUse = `${emailToUse}@pulseaxionhr.com`;
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: emailToUse,
+        password: newPassword.trim(),
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('User creation failed — no user returned.');
+
+      const parts = newFullName.trim().split(' ');
+      const initials = parts.map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'EM';
+
+      const { error: profileError } = await supabase.from('user_profiles').insert({
+        id: authData.user.id,
+        full_name: newFullName.trim(),
+        email: emailToUse,
+        job_title: newJobTitle.trim(),
+        avatar: initials,
+        role: newRole,
+        status: 'active',
+      });
+
+      if (profileError) throw profileError;
+
+      await logAuditAction(`Provisioned new ${newRole} account: ${emailToUse}`, 'user_profiles');
+
+      setProvisionSuccess(true);
+      setNewFullName('');
+      setNewJobTitle('');
+      setNewEmail('');
+      setNewPassword('');
+      setNewRole('employee');
+      setTimeout(() => setProvisionSuccess(false), 4000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Provisioning failed. Please try again.';
+      setProvisionError(message);
+    } finally {
+      setIsProvisioning(false);
+    }
   };
 
   if (isLoading) {
@@ -479,8 +551,8 @@ export default function AdminConsole() {
               type="submit"
               disabled={isSaving}
               className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
-                  ? 'bg-black text-white hover:bg-neutral-800'
-                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                ? 'bg-black text-white hover:bg-neutral-800'
+                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
                 }`}
             >
               <Save className="h-4 w-4" />
@@ -499,8 +571,8 @@ export default function AdminConsole() {
 
             {/* Red Octagon Shield */}
             <div className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto border-2 ${config.emergency_kill_switch
-                ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
-                : 'bg-neutral-50 text-neutral-400 border-neutral-200'
+              ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
+              : 'bg-neutral-50 text-neutral-400 border-neutral-200'
               }`}>
               <AlertOctagon className="h-10 w-10 stroke-[2.2]" />
             </div>
@@ -522,8 +594,8 @@ export default function AdminConsole() {
           <button
             onClick={handleToggleSystemPaused}
             className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 mt-6 ${config.emergency_kill_switch
-                ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
-                : 'bg-red-600 hover:bg-red-750 text-white border-transparent shadow-md'
+              ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
+              : 'bg-red-600 hover:bg-red-700 text-white border-transparent shadow-md'
               }`}
           >
             <ShieldAlert className="h-4.5 w-4.5" />
@@ -638,14 +710,129 @@ export default function AdminConsole() {
           )}
           <button
             onClick={handleSaveSecurityConfig}
-            className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-            }`}
+            className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+              }`}
           >
             <Save className="h-4 w-4" />
             <span>Save Security Config</span>
           </button>
         </div>
+      </div>
+
+      {/* ===== Account Distribution (Admin Override) ===== */}
+      <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+        <form onSubmit={handleProvision} className="space-y-4">
+          <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
+            <Users className="h-5 w-5 text-teal-600" />
+            <h3 className="text-base font-bold text-neutral-800">Account Distribution (Admin Override)</h3>
+          </div>
+
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            Backup path for provisioning Employee, Manager, or Admin accounts. Managers should use their dashboard for standard employee onboarding.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label htmlFor="prov-name" className="block text-xs font-bold text-neutral-700 mb-1">Full Name</label>
+              <input
+                id="prov-name"
+                type="text"
+                required
+                placeholder="e.g. Sarah Connor"
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="prov-title" className="block text-xs font-bold text-neutral-700 mb-1">Job Title</label>
+              <input
+                id="prov-title"
+                type="text"
+                required
+                placeholder="e.g. UX Engineer"
+                value={newJobTitle}
+                onChange={(e) => setNewJobTitle(e.target.value)}
+                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="prov-role" className="block text-xs font-bold text-neutral-700 mb-1">Account Role</label>
+              <select
+                id="prov-role"
+                required
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value as 'employee' | 'manager' | 'admin')}
+                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              >
+                <option value="employee">Employee</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="prov-email" className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
+              <div className="flex items-center">
+                <input
+                  id="prov-email"
+                  type="text"
+                  required
+                  placeholder="sarah"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className={`flex-1 p-2.5 rounded-l-lg border border-r-0 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+                />
+                <span className={`p-2.5 rounded-r-lg border border-l-0 text-xs bg-neutral-50 text-neutral-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}>
+                  @pulseaxionhr.com
+                </span>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label htmlFor="prov-password" className="block text-xs font-bold text-neutral-700 mb-1">Temporary Password <span className="text-red-500">*</span></label>
+              <input
+                id="prov-password"
+                type="text"
+                required
+                placeholder="Minimum 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              />
+            </div>
+          </div>
+
+          {provisionError && (
+            <div className="p-2.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-700 flex items-start gap-1.5 font-semibold leading-normal mt-4">
+              <ShieldAlert className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
+              <span>{provisionError}</span>
+            </div>
+          )}
+
+          {provisionSuccess && (
+            <div className="p-2.5 bg-teal-50 border border-teal-150 rounded-lg text-[10px] text-teal-850 flex items-start gap-1.5 font-semibold leading-normal mt-4">
+              <UserCheck className="h-4.5 w-4.5 text-teal-600 shrink-0 mt-0.5" />
+              <span>Account provisioned successfully! This user can now sign in from the login page.</span>
+            </div>
+          )}
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isProvisioning}
+              className={`w-auto px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${highContrast
+                ? 'bg-black text-white hover:bg-neutral-800'
+                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                }`}
+            >
+              <Plus className="h-4.5 w-4.5" />
+              <span>{isProvisioning ? 'Provisioning...' : 'Provision Profile'}</span>
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* ===== Module Opt-in Analytics ===== */}
