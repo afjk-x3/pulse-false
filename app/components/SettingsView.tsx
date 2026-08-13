@@ -182,8 +182,8 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
                   type="button"
                   onClick={() => setAvatar(preset)}
                   className={`h-11 w-11 rounded-full flex items-center justify-center text-xs font-extrabold border transition-all ${avatar === preset
-                      ? (highContrast ? 'border-2 border-black bg-neutral-900 text-white' : 'border-teal-500 bg-teal-50 text-teal-700 shadow-sm ring-2 ring-teal-200')
-                      : (highContrast ? 'border-black bg-white hover:bg-neutral-100' : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600')
+                    ? (highContrast ? 'border-2 border-black bg-neutral-900 text-white' : 'border-teal-500 bg-teal-50 text-teal-700 shadow-sm ring-2 ring-teal-200')
+                    : (highContrast ? 'border-black bg-white hover:bg-neutral-100' : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600')
                     }`}
                 >
                   {preset}
@@ -194,32 +194,32 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
 
           {errorMsg && (
             <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-800 flex items-start gap-2 font-semibold leading-normal animate-fade-in">
-              <ShieldAlert className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
+                <ShieldAlert className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
           )}
 
-          {successMsg && (
-            <div className="p-3.5 bg-teal-50 border border-teal-150 rounded-xl text-xs text-teal-850 flex items-start gap-2 font-semibold leading-normal animate-fade-in">
-              <CheckCircle className="h-4.5 w-4.5 text-teal-600 shrink-0 mt-0.5" />
-              <span>{successMsg}</span>
-            </div>
-          )}
+              {successMsg && (
+                <div className="p-3.5 bg-teal-50 border border-teal-150 rounded-xl text-xs text-teal-800 flex items-start gap-2 font-semibold leading-normal animate-fade-in">
+                  <CheckCircle className="h-4.5 w-4.5 text-teal-600 shrink-0 mt-0.5" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
 
-          <div className="border-t pt-4 flex justify-end">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${highContrast
-                  ? 'bg-black text-white hover:bg-neutral-800'
-                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-                }`}
-            >
-              <Save className="h-4 w-4" />
-              <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
-            </button>
-          </div>
-        </form>
+              <div className="border-t pt-4 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${highContrast
+                    ? 'bg-black text-white hover:bg-neutral-800'
+                    : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                    }`}
+                >
+                  <Save className="h-4 w-4" />
+                  <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
       </div>
     </div>
   );
