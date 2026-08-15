@@ -96,24 +96,23 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {!isCollapsed ? (
-              <div className="relative w-36 h-10 flex items-center select-none">
-                <Image 
-                  src="/logo.svg" 
-                  alt="Pulse: AxionHR logo" 
-                  fill
-                  className="object-contain"
-                  priority
-                />
+              <div className="flex items-center space-x-2 w-full">
+                <div className="w-10 h-10 flex items-center justify-center text-neutral-700 shrink-0">
+                  <Menu className="w-6 h-6" strokeWidth={2.5} />
+                </div>
+                <div className="relative w-32 h-8 flex items-center select-none shrink-0">
+                  <Image 
+                    src="/logo.svg" 
+                    alt="Pulse: AxionHR logo" 
+                    fill
+                    className="object-contain object-left"
+                    priority
+                  />
+                </div>
               </div>
             ) : (
-              <div className="relative w-8 h-8 flex items-center select-none">
-                <Image 
-                  src="/logo-icon.svg" 
-                  alt="Pulse logo icon" 
-                  fill
-                  className="object-contain"
-                  priority
-                />
+              <div className="w-10 h-10 flex items-center justify-center text-neutral-700">
+                <Menu className="w-6 h-6" strokeWidth={2.5} />
               </div>
             )}
           </button>

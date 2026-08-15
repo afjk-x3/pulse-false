@@ -88,10 +88,14 @@ export default function Home() {
       
       console.log('[Auth] fetchUserProfile result:', { data, error });
       if (data) {
-        setCurrentUser(data);
-        if (data.role === 'employee') setActiveTab('dashboard');
-        else if (data.role === 'manager') setActiveTab('manager');
-        else if (data.role === 'admin' || data.role === 'it') setActiveTab('admin');
+        setCurrentUser((prev: any) => {
+          if (!prev) {
+            if (data.role === 'employee') setActiveTab('dashboard');
+            else if (data.role === 'manager') setActiveTab('manager');
+            else if (data.role === 'admin' || data.role === 'it') setActiveTab('admin');
+          }
+          return data;
+        });
       } else {
         setLoginError('Authentication successful, but no User Profile was found. Please run the SQL script to create your profile.');
       }
