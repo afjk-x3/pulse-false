@@ -15,10 +15,24 @@ interface KudosWithProfiles extends KudosPost {
   recipient_name: string;
 }
 
+const RESTRICTED_WORDS = [
+  'fuck', 'shit', 'bitch', 'asshole', 'dick', 'cunt', 'bastard', 
+  'slut', 'whore', 'faggot', 'nigger', 'crap', 'piss'
+];
+
+function containsVulgarity(text: string) {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  return RESTRICTED_WORDS.some(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+}
+
 export default function KudosFeed() {
   const { highContrast } = useAccessibility();
   const [kudosList, setKudosList] = useState<KudosWithProfiles[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [profiles, setProfiles] = useState<Record<string, { name: string, role: string }>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('All');
   
@@ -29,11 +43,15 @@ export default function KudosFeed() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recipient, setRecipient] = useState(''); // UUID or name fallback
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
   const [category, setCategory] = useState<string>('Gratitude');
   const [customCategory, setCustomCategory] = useState('');
   const [message, setMessage] = useState('');
   const [senderName, setSenderName] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [successNotification, setSuccessNotification] = useState(false);
+  const [composerError, setComposerError] = useState<string | null>(null);
 
   useEffect(() => {
     let channel: any;
@@ -44,12 +62,12 @@ export default function KudosFeed() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) setCurrentUser(user);
 
-        // Fetch all active profiles to map UUIDs to names
-        const { data: profileData } = await supabase.from('user_profiles').select('id, full_name');
-        const profileMap: Record<string, string> = {};
+        // Fetch all active profiles to map UUIDs to names and roles
+        const { data: profileData } = await supabase.from('user_profiles').select('id, full_name, role');
+        const profileMap: Record<string, { name: string, role: string }> = {};
         if (profileData) {
           profileData.forEach(p => {
-            profileMap[p.id] = p.full_name;
+            profileMap[p.id] = { name: p.full_name, role: p.role };
           });
         }
         setProfiles(profileMap);
@@ -78,7 +96,7 @@ export default function KudosFeed() {
     };
   }, []);
 
-  const fetchKudos = async (profileMap: Record<string, string>) => {
+  const fetchKudos = async (profileMap: Record<string, { name: string, role: string }>) => {
     const { data: kudosData, error: fetchErr } = await supabase
       .from('kudos_posts')
       .select('*')
@@ -86,11 +104,24 @@ export default function KudosFeed() {
     
     if (fetchErr) throw fetchErr;
 
-    const mapped = (kudosData || []).map(k => ({
-      ...k,
-      sender_name: profileMap[k.sender_id] || 'Anonymous',
-      recipient_name: profileMap[k.recipient_id] || 'Unknown User'
-    }));
+    const mapped = (kudosData || []).map(k => {
+      let displaySender = profileMap[k.sender_id]?.name || 'Unknown User';
+      let actualMessage = k.message;
+
+      if (k.message.startsWith('ANON:')) {
+        const parts = k.message.split('|');
+        const customName = parts[0].replace('ANON:', '').trim();
+        displaySender = customName !== '' ? customName : 'Anonymous';
+        actualMessage = parts.slice(1).join('|');
+      }
+
+      return {
+        ...k,
+        sender_name: displaySender,
+        recipient_name: profileMap[k.recipient_id]?.name || 'Unknown User',
+        message: actualMessage
+      };
+    });
 
     setKudosList(mapped);
   };
@@ -102,41 +133,47 @@ export default function KudosFeed() {
 
   const handleSubmitKudos = async (e: React.FormEvent) => {
     e.preventDefault();
+    setComposerError(null);
     if (!message.trim()) return;
 
-    // A real app would provide a dropdown of users to select recipient_id.
-    // For this migration, we'll try to find a user by name, else fallback to a system UUID if not found,
-    // or block it. Since UI wasn't changed to a select dropdown, let's look up the UUID by name:
-    const matchedRecipient = Object.keys(profiles).find(
-      key => profiles[key].toLowerCase() === recipient.toLowerCase()
-    );
+    if (!recipient) {
+      setComposerError("Please select a valid colleague from the dropdown.");
+      return;
+    }
 
-    if (!matchedRecipient) {
-      alert("Recipient not found in directory. Please enter an exact full name.");
+    if (containsVulgarity(message) || containsVulgarity(senderName) || containsVulgarity(customCategory)) {
+      setComposerError("Your message contains restricted words. Please keep the Kudos professional and respectful.");
       return;
     }
 
     const finalCategory = category === 'Other' ? (customCategory.trim() || 'Other') : category;
+    const finalMessage = `ANON:${senderName.trim()}|${message.trim()}`;
     
     setIsSubmitting(true);
     try {
       await supabase.from('kudos_posts').insert({
         sender_id: currentUser?.id,
-        recipient_id: matchedRecipient,
-        message: message.trim(),
+        recipient_id: recipient,
+        message: finalMessage,
         category: finalCategory as any, // Cast to enum
         likes_count: 0
       });
       
       setRecipient('');
+      setRecipientSearch('');
       setMessage('');
       setSenderName('');
       setCustomCategory('');
       setCategory('Gratitude');
       setIsComposerOpen(false);
+      setSuccessNotification(true);
+      setTimeout(() => setSuccessNotification(false), 3000);
+      
+      // Explicitly fetch latest kudos
+      await fetchKudos(profiles);
     } catch (err) {
       console.error(err);
-      alert('Failed to send Kudos');
+      setComposerError('Failed to send Kudos');
     } finally {
       setIsSubmitting(false);
     }
@@ -225,6 +262,12 @@ export default function KudosFeed() {
         })()}
       </div>
 
+      {successNotification && (
+        <div className="bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold p-3 rounded-xl mb-4 mt-2 flex items-center justify-center animate-fade-in transition-all">
+          🎉 Kudos successfully sent!
+        </div>
+      )}
+
       {/* Kudos Grid */}
       {isLoading ? (
         <div className="p-12 flex justify-center">
@@ -309,7 +352,10 @@ export default function KudosFeed() {
                 <h3 id="composer-title" className="font-bold text-neutral-800">Compose Kudos Recognition</h3>
               </div>
               <button 
-                onClick={() => setIsComposerOpen(false)}
+                onClick={() => {
+                  setIsComposerOpen(false);
+                  setComposerError(null);
+                }}
                 className="p-1 rounded hover:bg-neutral-100"
                 aria-label="Close form"
               >
@@ -317,22 +363,58 @@ export default function KudosFeed() {
               </button>
             </div>
 
+            {composerError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold p-3 rounded-lg flex items-center mb-4 animate-fade-in">
+                ⚠️ {composerError}
+              </div>
+            )}
+
             <form onSubmit={handleSubmitKudos} className="space-y-4">
               <div>
                 <label htmlFor="kudos-recipient" className="block text-xs font-bold text-neutral-700 mb-1">
                   Recipient Name *
                 </label>
-                <input
-                  id="kudos-recipient"
-                  type="text"
-                  required
-                  placeholder="e.g. Sarah Jenkins (Must match exact directory name)"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                    highContrast ? 'border-black' : 'border-neutral-200'
-                  }`}
-                />
+                <div className="relative">
+                  <input
+                    id="kudos-recipient"
+                    type="text"
+                    required
+                    placeholder="Start typing a name..."
+                    value={recipientSearch}
+                    onChange={(e) => {
+                      setRecipientSearch(e.target.value);
+                      setRecipient(''); 
+                      setShowRecipientDropdown(true);
+                    }}
+                    onFocus={() => setShowRecipientDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowRecipientDropdown(false), 200)}
+                    className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+                      highContrast ? 'border-black' : 'border-neutral-200'
+                    }`}
+                  />
+                  {showRecipientDropdown && recipientSearch && (
+                    <ul className="absolute z-10 w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {Object.entries(profiles)
+                        .filter(([id, profile]) => id !== currentUser?.id && profile.role !== 'admin' && profile.name.toLowerCase().includes(recipientSearch.toLowerCase()))
+                        .map(([id, profile]) => (
+                          <li
+                            key={id}
+                            className="px-4 py-2 text-xs font-semibold hover:bg-teal-50 cursor-pointer"
+                            onMouseDown={() => {
+                              setRecipient(id);
+                              setRecipientSearch(profile.name);
+                              setShowRecipientDropdown(false);
+                            }}
+                          >
+                            {profile.name}
+                          </li>
+                        ))}
+                      {Object.entries(profiles).filter(([id, profile]) => id !== currentUser?.id && profile.role !== 'admin' && profile.name.toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
+                        <li className="px-4 py-2 text-xs text-neutral-500 italic">No colleagues found</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -367,11 +449,10 @@ export default function KudosFeed() {
                   <input
                     id="kudos-sender"
                     type="text"
-                    disabled
-                    placeholder="Auto-filled from auth profile"
+                    placeholder="Leave blank to send anonymously"
                     value={senderName}
                     onChange={(e) => setSenderName(e.target.value)}
-                    className={`w-full p-2.5 rounded-lg border text-xs bg-neutral-100 focus:outline-none font-semibold ${
+                    className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
                       highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
                   />
