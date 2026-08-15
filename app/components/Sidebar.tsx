@@ -90,8 +90,12 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
         <div className={`p-4 border-b flex items-center justify-between ${
           highContrast ? 'border-black' : 'border-[#f1f0ea]'
         }`}>
-          {!isCollapsed ? (
-            <>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex items-center w-full justify-center lg:justify-start hover:opacity-80 transition-opacity focus:outline-none rounded"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {!isCollapsed ? (
               <div className="relative w-36 h-10 flex items-center select-none">
                 <Image 
                   src="/logo.svg" 
@@ -101,18 +105,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                   priority
                 />
               </div>
-              <button
-                onClick={() => setIsCollapsed(true)}
-                className={`hidden lg:flex p-1.5 rounded-lg border hover:bg-neutral-50 text-neutral-500 transition-all ${
-                  highContrast ? 'border-black' : 'border-neutral-200'
-                }`}
-                aria-label="Collapse sidebar"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-            </>
-          ) : (
-            <div className="flex flex-col items-center w-full gap-2">
+            ) : (
               <div className="relative w-8 h-8 flex items-center select-none">
                 <Image 
                   src="/logo-icon.svg" 
@@ -122,17 +115,8 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                   priority
                 />
               </div>
-              <button
-                onClick={() => setIsCollapsed(false)}
-                className={`hidden lg:flex p-1 rounded-lg border hover:bg-neutral-50 text-neutral-500 transition-all ${
-                  highContrast ? 'border-black' : 'border-neutral-200'
-                }`}
-                aria-label="Expand sidebar"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
+            )}
+          </button>
           
           {/* Close button inside sidebar for mobile */}
           <button
@@ -169,7 +153,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                   setActiveTab(item.id);
                   setIsOpen(false); // Close sidebar on mobile select
                 }}
-                className={`w-full flex items-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                className={`w-full flex items-center transition-all duration-150 focus:outline-none ${
                   isCollapsed ? 'justify-center p-3 rounded-xl' : 'gap-3.5 px-4 py-3 rounded-lg text-left'
                 } ${buttonStyles}`}
                 aria-current={isActive ? 'page' : undefined}

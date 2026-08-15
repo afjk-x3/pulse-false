@@ -62,22 +62,12 @@ export default function SupportCircles() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) setCurrentUser(user);
 
-        // Fetch all profiles for non-anonymous name mapping
-        const { data: profileData } = await supabase.from('user_profiles').select('id, full_name');
-        const profileMap: Record<string, string> = {};
-        if (profileData) {
-          profileData.forEach(p => {
-            profileMap[p.id] = p.full_name;
-          });
-        }
-        setProfiles(profileMap);
-
-        await fetchMessages(profileMap, user?.id);
+        await fetchMessages(user?.id);
 
         channel = supabase
           .channel(`support-circles-${Date.now()}`)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'support_circle_messages' }, () => {
-            fetchMessages(profileMap, user?.id);
+            fetchMessages(user?.id);
           })
           .subscribe();
       } catch (err) {
@@ -95,7 +85,16 @@ export default function SupportCircles() {
     };
   }, []);
 
-  const fetchMessages = async (profileMap: Record<string, string>, currentUserId: string | undefined) => {
+  const fetchMessages = async (currentUserId: string | undefined) => {
+    // Fetch profiles fresh so we always have the latest names
+    const { data: profileData } = await supabase.from('user_profiles').select('id, full_name');
+    const profileMap: Record<string, string> = {};
+    if (profileData) {
+      profileData.forEach(p => {
+        profileMap[p.id] = p.full_name;
+      });
+    }
+
     const { data, error: fetchErr } = await supabase
       .from('support_circle_messages')
       .select('*')
@@ -104,11 +103,23 @@ export default function SupportCircles() {
     if (fetchErr) throw fetchErr;
 
     const mapped = (data || []).map(m => {
-      const isAnon = !!m.pseudonym_alias;
+      const rawAlias = m.pseudonym_alias;
+      const isActuallyRealName = rawAlias && rawAlias.startsWith('REALNAME:');
+      const isAnon = rawAlias && !isActuallyRealName;
+      
+      let displayAuthor = 'Unknown User';
+      if (isAnon) {
+        displayAuthor = rawAlias;
+      } else if (isActuallyRealName) {
+        displayAuthor = rawAlias.replace('REALNAME:', '');
+      } else {
+        displayAuthor = profileMap[m.user_id] || 'Unknown User';
+      }
+
       return {
         ...m,
-        isAnonymous: isAnon,
-        displayAuthor: isAnon ? m.pseudonym_alias! : (profileMap[m.user_id] || 'Unknown User'),
+        isAnonymous: !!isAnon,
+        displayAuthor,
         isCurrentUser: m.user_id === currentUserId
       };
     });
@@ -142,14 +153,19 @@ export default function SupportCircles() {
     e.preventDefault();
     if (!inputText.trim() || !currentUser) return;
 
+    // Fetch the current user's profile to get their real name just in case
+    const { data: profileData } = await supabase.from('user_profiles').select('full_name').eq('id', currentUser.id).single();
+    const realName = profileData?.full_name || 'Unknown User';
+
     try {
       await supabase.from('support_circle_messages').insert({
         user_id: currentUser.id,
         topic_channel: activeCircleId,
         message: inputText.trim(),
-        pseudonym_alias: isAnonymous ? generatePseudonym() : null
+        pseudonym_alias: isAnonymous ? generatePseudonym() : `REALNAME:${realName}`
       });
       setInputText('');
+      await fetchMessages(currentUser.id);
     } catch (err) {
       console.error(err);
       alert('Failed to send message.');
@@ -228,7 +244,7 @@ export default function SupportCircles() {
         </div>
 
         {/* Main Circle Chat Channel Area */}
-        <div className="lg:col-span-2 flex flex-col justify-between h-full bg-white relative">
+        <div className="lg:col-span-2 flex flex-col justify-between h-full bg-white relative min-h-0">
           {/* Chat Header */}
           <div className={`p-4 border-b flex items-center justify-between shrink-0 ${highContrast ? 'border-black' : 'border-[#f1f0ea]'
             }`}>
