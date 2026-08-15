@@ -13,13 +13,13 @@ export default function MicroCoachingNudge() {
   const [timerComplete, setTimerComplete] = useState(false);
 
   useEffect(() => {
-    // Show toast after 4 seconds
+    // Show toast after 90 minutes
     const showTimer = setTimeout(() => {
       const dismissed = sessionStorage.getItem('pulse-nudge-dismissed') === 'true';
       if (!dismissed) {
         setIsVisible(true);
       }
-    }, 4000);
+    }, 90 * 60 * 1000); // 90 minutes
 
     return () => clearTimeout(showTimer);
   }, []);
