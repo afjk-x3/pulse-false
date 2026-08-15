@@ -426,10 +426,14 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
 
         {/* User Profile Info */}
         <div className="flex items-center gap-3 pl-2 border-l border-neutral-200">
-          <div className="relative h-9 w-9 rounded-full overflow-hidden border border-neutral-200 shrink-0 select-none">
-            <div className="h-full w-full bg-neutral-100 flex items-center justify-center font-bold text-teal-700 text-sm animate-fade-in">
-              {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'U'}
-            </div>
+          <div className="relative h-9 w-9 rounded-full overflow-hidden border border-neutral-200 shrink-0 select-none bg-neutral-100">
+            {(currentUser?.avatar?.startsWith('data:image') || currentUser?.avatar?.startsWith('http')) ? (
+              <img src={currentUser.avatar} alt="Profile" className="h-full w-full object-cover animate-fade-in" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center font-bold text-teal-700 text-sm animate-fade-in">
+                {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'U'}
+              </div>
+            )}
           </div>
           <div className="hidden sm:block text-left select-none animate-fade-in">
             <span className="block text-xs font-bold text-neutral-800 leading-none">{currentUser?.name || currentUser?.full_name}</span>

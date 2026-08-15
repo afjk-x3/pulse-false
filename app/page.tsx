@@ -373,8 +373,12 @@ export default function Home() {
                       >
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <div className="h-9 w-9 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-teal-700 border border-neutral-200 shrink-0">
-                              {account.avatar || account.full_name?.substring(0, 2).toUpperCase() || 'U'}
+                            <div className="h-9 w-9 rounded-full overflow-hidden bg-neutral-100 flex items-center justify-center text-xs font-bold text-teal-700 border border-neutral-200 shrink-0">
+                              {(account.avatar?.startsWith('data:image') || account.avatar?.startsWith('http')) ? (
+                                <img src={account.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                              ) : (
+                                account.avatar || account.full_name?.substring(0, 2).toUpperCase() || 'U'
+                              )}
                             </div>
                             <div className="truncate">
                               <h2 className="text-xs font-bold text-neutral-800 leading-tight truncate">{account.full_name}</h2>

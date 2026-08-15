@@ -473,8 +473,12 @@ export default function ManagerDashboard() {
                     {accounts.map((user) => (
                       <tr key={user.id} className="hover:bg-neutral-50/50 transition">
                         <td className="py-3">
-                          <div className="h-7 w-7 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center font-bold text-[10px]">
-                            {user.avatar ?? user.full_name.substring(0, 2).toUpperCase()}
+                          <div className="h-7 w-7 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center font-bold text-[10px] overflow-hidden">
+                            {(user.avatar?.startsWith('data:image') || user.avatar?.startsWith('http')) ? (
+                              <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                            ) : (
+                              user.avatar ?? user.full_name.substring(0, 2).toUpperCase()
+                            )}
                           </div>
                         </td>
                         <td className="py-3 font-bold text-neutral-800">{user.full_name}</td>
@@ -573,7 +577,13 @@ export default function ManagerDashboard() {
               return (
                 <div key={trend.name} className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-neutral-100 text-[9px] font-bold">{trend.avatar}</span>
+                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-neutral-100 text-[9px] font-bold overflow-hidden">
+                      {(trend.avatar?.startsWith('data:image') || trend.avatar?.startsWith('http')) ? (
+                        <img src={trend.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        trend.avatar
+                      )}
+                    </span>
                     <span className="text-xs font-bold text-neutral-700">{trend.name}</span>
                     <span className="px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-100 rounded text-[8px] font-bold">OPTED IN</span>
                   </div>

@@ -180,8 +180,12 @@ export default function CoffeeRoulette() {
               </span>
 
               {/* Avatar circle */}
-              <div className="h-20 w-20 rounded-full bg-teal-50 text-teal-700 border-2 border-teal-200 shadow-md flex items-center justify-center text-2xl font-bold mx-auto">
-                {pairedAvatar}
+              <div className="h-20 w-20 rounded-full bg-teal-50 text-teal-700 border-2 border-teal-200 shadow-md flex items-center justify-center text-2xl font-bold mx-auto overflow-hidden">
+                {(pairedAvatar?.startsWith('data:image') || pairedAvatar?.startsWith('http')) ? (
+                  <img src={pairedAvatar} alt="Paired avatar" className="h-full w-full object-cover" />
+                ) : (
+                  pairedAvatar
+                )}
               </div>
 
               <div>

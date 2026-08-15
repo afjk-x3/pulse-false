@@ -450,8 +450,12 @@ export default function CalendarGuard() {
                             : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50'
                         }`}
                       >
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 text-[9px] font-bold mr-1.5">
-                          {profile.avatar ?? profile.full_name.substring(0, 2).toUpperCase()}
+                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 text-[9px] font-bold mr-1.5 overflow-hidden">
+                          {(profile.avatar?.startsWith('data:image') || profile.avatar?.startsWith('http')) ? (
+                            <img src={profile.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                          ) : (
+                            profile.avatar ?? profile.full_name.substring(0, 2).toUpperCase()
+                          )}
                         </span>
                         {profile.full_name}
                       </button>

@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { Save, User, ShieldAlert, CheckCircle } from 'lucide-react';
+import { Save, User, ShieldAlert, CheckCircle, Upload, X } from 'lucide-react';
+import Cropper from 'react-easy-crop';
+import { getCroppedImg } from '../utils/cropImage';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
@@ -25,6 +27,13 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Crop Modal State
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
 
   const avatarPresets = ['AR', 'DV', 'PS', 'SC', 'MK', 'LH', 'JW', 'KL'];
 
@@ -175,7 +184,47 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
           {/* Profile Image / Avatar Preset Selection */}
           <div>
             <span className="block text-xs font-bold text-neutral-700 mb-2">Select Profile Avatar</span>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2.5 items-center">
+              {/* Custom Image Upload */}
+              <div className="relative group">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setImageToCrop(reader.result as string);
+                        setZoom(1);
+                        setCrop({ x: 0, y: 0 });
+                        setIsCropModalOpen(true);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                    e.target.value = '';
+                  }}
+                  title="Upload custom avatar"
+                />
+                <button
+                  type="button"
+                  className={`h-11 w-11 rounded-full flex items-center justify-center text-xs border transition-all relative overflow-hidden ${
+                    avatar.startsWith('data:image') || avatar.startsWith('http')
+                      ? (highContrast ? 'border-2 border-black ring-2 ring-black' : 'border-teal-500 shadow-sm ring-2 ring-teal-200')
+                      : (highContrast ? 'border-black bg-white group-hover:bg-neutral-100' : 'border-neutral-200 bg-neutral-50 group-hover:bg-neutral-100 text-neutral-600')
+                  }`}
+                >
+                  {(avatar.startsWith('data:image') || avatar.startsWith('http')) ? (
+                    <img src={avatar} alt="Custom avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <Upload className="w-5 h-5 text-neutral-500" />
+                  )}
+                </button>
+              </div>
+
+              <div className="h-6 w-px bg-neutral-200 mx-1"></div>
+
               {avatarPresets.map((preset) => (
                 <button
                   key={preset}
@@ -221,6 +270,75 @@ export default function SettingsView({ currentUser, onUserUpdated }: SettingsVie
               </div>
             </form>
       </div>
+
+      {/* Crop Modal Overlay */}
+      {isCropModalOpen && imageToCrop && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-scale-up">
+            <div className="p-4 border-b border-neutral-100 flex justify-between items-center">
+              <h3 className="font-bold text-neutral-800 text-sm">Crop Avatar Image</h3>
+              <button onClick={() => setIsCropModalOpen(false)} className="text-neutral-400 hover:text-black transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="relative w-full h-[320px] bg-neutral-900 overflow-hidden">
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onCropComplete={(_, croppedPixels) => setCroppedAreaPixels(croppedPixels)}
+                onZoomChange={setZoom}
+              />
+            </div>
+            
+            <div className="p-5 bg-white flex flex-col gap-5">
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Zoom</span>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="flex-1 h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCropModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition focus:ring-2 focus:ring-neutral-300 outline-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (croppedAreaPixels) {
+                        const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels);
+                        setAvatar(croppedImage);
+                        setIsCropModalOpen(false);
+                      }
+                    } catch (e) {
+                      console.error("Crop error:", e);
+                    }
+                  }}
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition focus:ring-2 focus:ring-teal-500 shadow-sm outline-none"
+                >
+                  Apply & Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
