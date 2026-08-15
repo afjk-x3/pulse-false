@@ -100,7 +100,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                 <div className="w-10 h-10 flex items-center justify-center text-neutral-700 shrink-0">
                   <Menu className="w-6 h-6" strokeWidth={2.5} />
                 </div>
-                <div className="relative w-32 h-8 flex items-center select-none shrink-0">
+                <div className="relative w-40 h-10 flex items-center select-none shrink-0">
                   <Image 
                     src="/logo.svg" 
                     alt="Pulse: AxionHR logo" 

@@ -36,21 +36,24 @@ export default function SupportCircles() {
   const [inputText, setInputText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [isDiscoverModalOpen, setIsDiscoverModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newCircleName, setNewCircleName] = useState('');
+  const [newCircleDesc, setNewCircleDesc] = useState('');
+  const [newCircleEmoji, setNewCircleEmoji] = useState('💬');
   const [searchQuery, setSearchQuery] = useState('');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const [activeCircles, setActiveCircles] = useState<Circle[]>([
     { id: 'stress', name: 'Stress Reduction', desc: 'Sharing meditation, boundaries, & screen breaks', emoji: '🧘', members: 42 },
-    { id: 'parenting', name: 'Parental Support', desc: 'Balancing school runs, family obligations, and sprints', emoji: '🍼', members: 29 },
-    { id: 'neurodiversity', name: 'Neurodiversity Hub', desc: 'Safe sharing for ADHD, dyslexia, sensory needs, etc.', emoji: '🧠', members: 18 },
+    { id: 'working-moms', name: 'Working Moms of Engineering', desc: 'Balancing school runs, code reviews, and sprints', emoji: '👩‍💻', members: 29 },
+    { id: 'marathon', name: 'Marathon Trainers', desc: 'Pre-work running groups, nutrition, and injury prevention', emoji: '🏃‍♂️', members: 18 },
   ]);
 
   const [discoverableCircles, setDiscoverableCircles] = useState<Circle[]>([
+    { id: 'corporate', name: 'Corporate Announcements', desc: 'Official company-wide health and wellness directives', emoji: '🏢', members: 1042 },
     { id: 'sleep', name: 'Sleep & Recovery', desc: 'Circadian rhythms, off-screen sleep prep, and fatigue tracking', emoji: '💤', members: 35 },
     { id: 'inclusivity', name: 'Workplace Inclusivity', desc: 'Safe sharing for LGBTQ+, underrepresented groups, and allies', emoji: '🌈', members: 22 },
-    { id: 'fitness', name: 'Physical Fitness', desc: 'Posture stretch prompts, home workouts, and walking syncs', emoji: '🏃‍♀️', members: 51 },
-    { id: 'mindful-eating', name: 'Mindful Eating', desc: 'Balanced meal preps, hydration reminders, and screen-free lunch tips', emoji: '🥑', members: 14 },
   ]);
 
   useEffect(() => {
@@ -219,18 +222,32 @@ export default function SupportCircles() {
               })}
             </div>
 
-            {/* Discover More Circles Button */}
-            <button
-              type="button"
-              onClick={() => setIsDiscoverModalOpen(true)}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 mt-3.5 ${highContrast
-                  ? 'border-black hover:bg-neutral-100 text-black bg-white'
-                  : 'border-dashed border-teal-300 hover:border-teal-500 text-teal-700 bg-teal-50/20 hover:bg-teal-50'
-                }`}
-            >
-              <Compass className="h-4.5 w-4.5" />
-              <span>Discover More Circles</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="mt-3.5 space-y-2">
+              <button
+                type="button"
+                onClick={() => setIsDiscoverModalOpen(true)}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
+                    ? 'border-black hover:bg-neutral-100 text-black bg-white'
+                    : 'border-dashed border-teal-300 hover:border-teal-500 text-teal-700 bg-teal-50/20 hover:bg-teal-50'
+                  }`}
+              >
+                <Compass className="h-4.5 w-4.5" />
+                <span>Discover More Circles</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
+                    ? 'border-black bg-black text-white hover:bg-neutral-800'
+                    : 'border-teal-500 bg-teal-500 text-white hover:bg-teal-600 shadow-sm'
+                  }`}
+              >
+                <Plus className="h-4.5 w-4.5" />
+                <span>Create New Circle</span>
+              </button>
+            </div>
           </div>
 
           {/* Info Box */}
@@ -488,6 +505,103 @@ export default function SupportCircles() {
           </div>
         </div>
       )}
+
+        {/* Create Circle Modal */}
+        {isCreateModalOpen && (
+          <>
+            <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 animate-fade-in" onClick={() => setIsCreateModalOpen(false)} />
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+              <div className={`w-full max-w-md bg-white rounded-2xl shadow-2xl border pointer-events-auto flex flex-col max-h-[85vh] animate-slide-up-fade ${highContrast ? 'border-2 border-black' : 'border-neutral-100'
+                }`}>
+                <div className={`p-4 border-b flex items-center justify-between ${highContrast ? 'border-black' : 'border-neutral-100'}`}>
+                  <h3 className="font-bold text-neutral-800 flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-teal-600" />
+                    Create Employee Circle
+                  </h3>
+                  <button onClick={() => setIsCreateModalOpen(false)} className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors">
+                    <X className="w-5 h-5 text-neutral-500" />
+                  </button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-600 mb-1.5">Circle Name</label>
+                    <input 
+                      type="text" 
+                      value={newCircleName}
+                      onChange={e => setNewCircleName(e.target.value)}
+                      placeholder="e.g. Remote Developers"
+                      className="w-full p-2.5 rounded-lg border focus:ring-2 focus:ring-teal-500 outline-none text-sm font-semibold" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-600 mb-1.5">Description</label>
+                    <input 
+                      type="text" 
+                      value={newCircleDesc}
+                      onChange={e => setNewCircleDesc(e.target.value)}
+                      placeholder="What is this circle about?"
+                      className="w-full p-2.5 rounded-lg border focus:ring-2 focus:ring-teal-500 outline-none text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-600 mb-1.5">Emoji</label>
+                    <div className="flex gap-4 items-start">
+                      <input 
+                        type="text" 
+                        value={newCircleEmoji}
+                        onChange={e => setNewCircleEmoji(e.target.value)}
+                        maxLength={2}
+                        className="w-16 p-2.5 text-center rounded-lg border focus:ring-2 focus:ring-teal-500 outline-none text-xl shrink-0" 
+                      />
+                      <div className="flex flex-wrap gap-1.5 bg-neutral-50 p-2 rounded-lg border border-neutral-100">
+                        {['💬', '🧘', '👩‍💻', '🏃‍♂️', '🏢', '💤', '🌈', '🥑', '🧠', '🍼', '☕', '🌟', '💡', '🎉', '🤝', '🔥', '❤️', '🪴'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => setNewCircleEmoji(emoji)}
+                            className={`w-7 h-7 flex items-center justify-center rounded text-base transition-all ${
+                              newCircleEmoji === emoji 
+                                ? 'bg-white shadow-sm scale-110 border border-neutral-200' 
+                                : 'hover:bg-neutral-200/50 hover:scale-110 border border-transparent'
+                            }`}
+                            type="button"
+                            aria-label={`Select ${emoji} emoji`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={`p-4 border-t flex justify-end gap-3 ${highContrast ? 'border-black' : 'border-neutral-100'}`}>
+                  <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-800">
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (!newCircleName.trim()) return;
+                      const newId = newCircleName.toLowerCase().replace(/\s+/g, '-');
+                      setActiveCircles([...activeCircles, {
+                        id: newId,
+                        name: newCircleName,
+                        desc: newCircleDesc || 'Employee driven circle',
+                        emoji: newCircleEmoji || '💬',
+                        members: 1
+                      }]);
+                      setActiveCircleId(newId);
+                      setIsCreateModalOpen(false);
+                      setNewCircleName('');
+                      setNewCircleDesc('');
+                    }}
+                    className={`px-5 py-2 text-sm font-bold rounded-lg transition-colors ${highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+                  >
+                    Create Circle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
     </>
   );
 }
