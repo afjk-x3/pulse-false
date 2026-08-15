@@ -46,7 +46,7 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
   } = useAccessibility();
 
   const [isAccessMenuOpen, setIsAccessMenuOpen] = useState(false);
-  const [cvActive, setCvActive] = useState(true);
+  const [cvActive, setCvActive] = useState(false);
   const [cvTooltipVisible, setCvTooltipVisible] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -116,10 +116,14 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
           .eq('id', user.id)
           .single();
         if (data) {
-          // Also persist back to localStorage for fallback scripts that might still check it
-          localStorage.setItem('pulse-cv-consent', String(data.camera_telemetry_consented));
-          // Do not auto-activate on load; require explicit click each session
+          const consent = data.camera_telemetry_consented;
+          
+          // Always stay off on page load until explicitly turned on by user
+          setCvActive(false);
           localStorage.setItem('pulse-cv-active', 'false');
+          
+          // Also persist back to localStorage for fallback scripts that might still check it
+          localStorage.setItem('pulse-cv-consent', String(consent));
         }
       } else {
         // Fallback for when not fully migrated in page.tsx
