@@ -1,14 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { 
-  Accessibility, 
-  Video, 
-  VideoOff, 
+import {
+  Accessibility,
+  Video,
+  VideoOff,
   Sparkles,
   X,
-  LogOut
+  LogOut,
+  Maximize,
+  Minimize,
+  Circle,
+  Expand
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import WebcamCVConsentModal from './WebcamCVConsentModal';
@@ -45,9 +50,60 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
   const [cvTooltipVisible, setCvTooltipVisible] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [videoMode, setVideoMode] = useState<'normal' | 'fullscreen' | 'bubble'>('normal');
+
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDraggingState, setIsDraggingState] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (videoMode === 'fullscreen') return;
+    if ((e.target as HTMLElement).tagName.toLowerCase() === 'button' || (e.target as HTMLElement).closest('button')) return;
+
+    isDragging.current = true;
+    setIsDraggingState(true);
+    dragStart.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current || !widgetRef.current) return;
+
+    let newX = e.clientX - dragStart.current.x;
+    let newY = e.clientY - dragStart.current.y;
+
+    const rect = widgetRef.current.getBoundingClientRect();
+
+    const maxX = 24;
+    const minX = -(window.innerWidth - rect.width - 24);
+    const maxY = 24;
+    const minY = -(window.innerHeight - rect.height - 24);
+
+    newX = Math.max(minX, Math.min(maxX, newX));
+    newY = Math.max(minY, Math.min(maxY, newY));
+
+    setPosition({ x: newX, y: newY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    setIsDraggingState(false);
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
 
   // Load CV active state from Supabase (or fallback to local while transitioning)
   useEffect(() => {
@@ -137,7 +193,7 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
       setCvActive(false);
       localStorage.setItem('pulse-cv-active', 'false');
       updateConsentDB(false);
-      
+
       setCvTooltipVisible(true);
       const timer = setTimeout(() => setCvTooltipVisible(false), 4000);
       return () => clearTimeout(timer);
@@ -147,7 +203,7 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
         setCvActive(true);
         localStorage.setItem('pulse-cv-active', 'true');
         updateConsentDB(true);
-        
+
         setCvTooltipVisible(true);
         const timer = setTimeout(() => setCvTooltipVisible(false), 4000);
         return () => clearTimeout(timer);
@@ -163,7 +219,7 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
     setCvActive(true);
     setIsConsentModalOpen(false);
     updateConsentDB(true);
-    
+
     setCvTooltipVisible(true);
     setTimeout(() => setCvTooltipVisible(false), 4000);
   };
@@ -177,346 +233,396 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
   };
 
   return (
-    <header className={`sticky top-0 right-0 z-20 flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${
-      highContrast 
-        ? 'border-black bg-white text-black' 
-        : 'border-[#f1f0ea]'
-    }`}>
-      {/* Page Title & Breadcrumb (Responsive margin for mobile burger) */}
-      <div className="flex items-center gap-3 pl-14 lg:pl-0">
-        {/* Mobile-only small logo marker */}
-        <div className="lg:hidden relative w-8 h-8 shrink-0">
-          <Image 
-            src="/logo-icon.svg" 
-            alt="Pulse mark" 
-            fill
-            className="object-contain"
-          />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-800 focus:outline-none">
-            {title}
-          </h1>
-          <p className="text-xs text-neutral-400 hidden sm:block">AxionHR Well-Being Guardian Dashboard</p>
-        </div>
-      </div>
-
-      {/* Header Actions */}
-      <div className="flex items-center gap-4">
-        {/* Active Local Computer Vision Processing Camera Status */}
-        <div className="relative">
-          <button
-            onClick={toggleCv}
-            disabled={loading}
-            className={`p-2.5 rounded-full relative transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              cvActive 
-                ? (highContrast ? 'bg-black text-white border-2 border-black animate-glow-teal' : 'bg-teal-50 text-teal-600 animate-glow-teal')
-                : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'
-            } ${loading ? 'opacity-50' : ''}`}
-            aria-label={cvActive ? "Pause Local Well-being Computer Vision Telemetry" : "Resume Local Well-being Computer Vision Telemetry"}
-            aria-live="polite"
-            onMouseEnter={() => setCvTooltipVisible(true)}
-            onMouseLeave={() => setCvTooltipVisible(false)}
-          >
-            {cvActive ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-            
-            {/* Pulsing indicator core */}
-            {cvActive && (
-              <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-teal-400 ring-2 ring-white" />
-            )}
-          </button>
-
-          {/* Micro-Telemetry status explanation tooltips */}
-          {cvTooltipVisible && (
-            <div className={`absolute right-0 mt-3.5 w-72 p-3.5 rounded-lg border bg-white shadow-lg text-xs leading-relaxed z-50 text-neutral-600 ${
-              highContrast ? 'border-black text-black font-bold' : 'border-neutral-200'
-            }`}>
-              <div className="flex items-center gap-1.5 font-semibold text-neutral-800 mb-1">
-                <Sparkles className="h-4 w-4 text-teal-600" />
-                <span>Local Computer Vision Processing</span>
-              </div>
-              <p className="mb-2">
-                {cvActive 
-                  ? "Active local analysis (gaze, micro-expressions, posture) to compute stress indices. Completely private." 
-                  : "Analysis disabled. Stress telemetry is currently suspended."}
-              </p>
-              <div className="p-1.5 bg-neutral-50 rounded border border-neutral-100 text-[10px] text-neutral-500 flex items-center gap-1">
-                <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                <span>100% In-Browser. Zero server transmission.</span>
-              </div>
-            </div>
-          )}
+    <>
+      <header className={`sticky top-0 right-0 z-20 flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${highContrast
+          ? 'border-black bg-white text-black'
+          : 'border-[#f1f0ea]'
+        }`}>
+        {/* Page Title & Breadcrumb (Responsive margin for mobile burger) */}
+        <div className="flex items-center gap-3 pl-14 lg:pl-0">
+          {/* Mobile-only small logo marker */}
+          <div className="lg:hidden relative w-8 h-8 shrink-0">
+            <Image
+              src="/logo-icon.svg"
+              alt="Pulse mark"
+              fill
+              className="object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-800 focus:outline-none">
+              {title}
+            </h1>
+            <p className="text-xs text-neutral-400 hidden sm:block">AxionHR Well-Being Guardian Dashboard</p>
+          </div>
         </div>
 
-        {/* Global Accessibility Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
-            className={`p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              isAccessMenuOpen 
-                ? (highContrast ? 'bg-black text-white border-2 border-black' : 'bg-neutral-800 text-white')
-                : (highContrast ? 'border border-black text-black hover:bg-neutral-100' : 'bg-neutral-50 text-neutral-600 hover:bg-neutral-100')
-            }`}
-            aria-expanded={isAccessMenuOpen}
-            aria-haspopup="true"
-            aria-label="Accessibility settings panel"
-          >
-            <Accessibility className="h-5 w-5" />
-          </button>
+        {/* Header Actions */}
+        <div className="flex items-center gap-4">
+          {/* Active Local Computer Vision Processing Camera Status */}
+          <div className="relative">
+            <button
+              onClick={toggleCv}
+              disabled={loading}
+              className={`p-2.5 rounded-full relative transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 ${cvActive
+                  ? (highContrast ? 'bg-black text-white border-2 border-black animate-glow-teal' : 'bg-teal-50 text-teal-600 animate-glow-teal')
+                  : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'
+                } ${loading ? 'opacity-50' : ''}`}
+              aria-label={cvActive ? "Pause Local Well-being Computer Vision Telemetry" : "Resume Local Well-being Computer Vision Telemetry"}
+              aria-live="polite"
+              onMouseEnter={() => setCvTooltipVisible(true)}
+              onMouseLeave={() => setCvTooltipVisible(false)}
+            >
+              {cvActive ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
 
-          {/* Dropdown Menu */}
-          {isAccessMenuOpen && (
-            <>
-              {/* Overlay blocker for outside clicks */}
-              <div className="fixed inset-0 z-40" onClick={() => setIsAccessMenuOpen(false)} />
-              
-              <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border bg-white shadow-xl z-50 transition-all ${
-                highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
-              }`}>
-                <div className="flex items-center justify-between border-b pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Accessibility className="h-5 w-5 text-teal-600" />
-                    <span className="font-bold text-neutral-800">Accessibility Hub</span>
-                  </div>
-                  <button 
-                    onClick={() => setIsAccessMenuOpen(false)}
-                    className="p-1 rounded hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500"
-                    aria-label="Close accessibility panel"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+              {/* Pulsing indicator core */}
+              {cvActive && (
+                <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-teal-400 ring-2 ring-white" />
+              )}
+            </button>
+
+            {/* Micro-Telemetry status explanation tooltips */}
+            {cvTooltipVisible && (
+              <div className={`absolute right-0 mt-3.5 w-72 p-3.5 rounded-lg border bg-white shadow-lg text-xs leading-relaxed z-50 text-neutral-600 ${highContrast ? 'border-black text-black font-bold' : 'border-neutral-200'
+                }`}>
+                <div className="flex items-center gap-1.5 font-semibold text-neutral-800 mb-1">
+                  <Sparkles className="h-4 w-4 text-teal-600" />
+                  <span>Local Computer Vision Processing</span>
                 </div>
+                <p className="mb-2">
+                  {cvActive
+                    ? "Active local analysis (gaze, micro-expressions, posture) to compute stress indices. Completely private."
+                    : "Analysis disabled. Stress telemetry is currently suspended."}
+                </p>
+                <div className="p-1.5 bg-neutral-50 rounded border border-neutral-100 text-[10px] text-neutral-500 flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  <span>100% In-Browser. Zero server transmission.</span>
+                </div>
+              </div>
+            )}
+          </div>
 
-                <div className="space-y-4">
-                  {/* OpenDyslexic Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label htmlFor="dyslexic-toggle" className="block text-sm font-semibold text-neutral-700">OpenDyslexic Font</label>
-                      <span className="text-[11px] text-neutral-400 block">Enables dyslexia-friendly typeface</span>
+          {/* Global Accessibility Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
+              className={`p-2.5 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 ${isAccessMenuOpen
+                  ? (highContrast ? 'bg-black text-white border-2 border-black' : 'bg-neutral-800 text-white')
+                  : (highContrast ? 'border border-black text-black hover:bg-neutral-100' : 'bg-neutral-50 text-neutral-600 hover:bg-neutral-100')
+                }`}
+              aria-expanded={isAccessMenuOpen}
+              aria-haspopup="true"
+              aria-label="Accessibility settings panel"
+            >
+              <Accessibility className="h-5 w-5" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isAccessMenuOpen && (
+              <>
+                {/* Overlay blocker for outside clicks */}
+                <div className="fixed inset-0 z-40" onClick={() => setIsAccessMenuOpen(false)} />
+
+                <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border bg-white shadow-xl z-50 transition-all ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+                  }`}>
+                  <div className="flex items-center justify-between border-b pb-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Accessibility className="h-5 w-5 text-teal-600" />
+                      <span className="font-bold text-neutral-800">Accessibility Hub</span>
                     </div>
                     <button
-                      id="dyslexic-toggle"
-                      role="switch"
-                      aria-checked={openDyslexic}
-                      onClick={() => setOpenDyslexic(!openDyslexic)}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                        openDyslexic ? 'bg-teal-600' : 'bg-neutral-200'
-                      }`}
+                      onClick={() => setIsAccessMenuOpen(false)}
+                      className="p-1 rounded hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500"
+                      aria-label="Close accessibility panel"
                     >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        openDyslexic ? 'translate-x-5' : 'translate-x-0'
-                      }`} />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
 
-                  {/* Reading Ruler Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label htmlFor="ruler-toggle" className="block text-sm font-semibold text-neutral-700">Reading Ruler</label>
-                      <span className="text-[11px] text-neutral-400 block">Horizontal tracking guide follows cursor</span>
-                    </div>
-                    <button
-                      id="ruler-toggle"
-                      role="switch"
-                      aria-checked={readingRuler}
-                      onClick={() => setReadingRuler(!readingRuler)}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                        readingRuler ? 'bg-teal-600' : 'bg-neutral-200'
-                      }`}
-                    >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        readingRuler ? 'translate-x-5' : 'translate-x-0'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {/* High Contrast Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label htmlFor="contrast-toggle" className="block text-sm font-semibold text-neutral-700">High Contrast Mode</label>
-                      <span className="text-[11px] text-neutral-400 block">Stark black & white layout borders</span>
-                    </div>
-                    <button
-                      id="contrast-toggle"
-                      role="switch"
-                      aria-checked={highContrast}
-                      onClick={() => setHighContrast(!highContrast)}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                        highContrast ? 'bg-teal-600' : 'bg-neutral-200'
-                      }`}
-                    >
-                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        highContrast ? 'translate-x-5' : 'translate-x-0'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {/* Font Scaling Options */}
-                  <div className="border-t pt-3.5">
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Text Zoom Scale</label>
-                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-neutral-50 rounded-lg border border-neutral-100">
-                      {(['normal', 'large', 'extra-large'] as const).map((scale) => (
-                        <button
-                          key={scale}
-                          onClick={() => setFontScale(scale)}
-                          className={`py-1.5 px-2 rounded-md text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${
-                            fontScale === scale
-                              ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80 font-bold'
-                              : 'text-neutral-500 hover:text-neutral-800'
-                          }`}
-                        >
-                          {scale === 'normal' && '100%'}
-                          {scale === 'large' && '120%'}
-                          {scale === 'extra-large' && '140%'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Text-to-Speech Toggle & Sliders */}
-                  <div className="border-t pt-3.5 space-y-3">
+                  <div className="space-y-4">
+                    {/* OpenDyslexic Toggle */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <label htmlFor="tts-toggle" className="block text-sm font-semibold text-neutral-700">Text-to-Speech</label>
-                        <span className="text-[11px] text-neutral-400 block">Reads hovered text elements</span>
+                        <label htmlFor="dyslexic-toggle" className="block text-sm font-semibold text-neutral-700">OpenDyslexic Font</label>
+                        <span className="text-[11px] text-neutral-400 block">Enables dyslexia-friendly typeface</span>
                       </div>
                       <button
-                        id="tts-toggle"
+                        id="dyslexic-toggle"
                         role="switch"
-                        aria-checked={ttsEnabled}
-                        onClick={() => setTtsEnabled(!ttsEnabled)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                          ttsEnabled ? 'bg-teal-600' : 'bg-neutral-200'
-                        }`}
+                        aria-checked={openDyslexic}
+                        onClick={() => setOpenDyslexic(!openDyslexic)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${openDyslexic ? 'bg-teal-600' : 'bg-neutral-200'
+                          }`}
                       >
-                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                          ttsEnabled ? 'translate-x-5' : 'translate-x-0'
-                        }`} />
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${openDyslexic ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
                       </button>
                     </div>
 
-                    {ttsEnabled && (
-                      <div className="space-y-2.5 p-2 bg-neutral-50 rounded-lg border border-neutral-100">
-                        <div>
-                          <div className="flex justify-between text-[10px] font-bold text-neutral-500">
-                            <span>Speech Speed</span>
-                            <span>{ttsSpeed}x</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0.5"
-                            max="2.0"
-                            step="0.1"
-                            value={ttsSpeed}
-                            onChange={(e) => setTtsSpeed(Number(e.target.value))}
-                            className="w-full h-1.5 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-teal-600 focus:outline-none"
-                            aria-label="Speech Speed"
-                          />
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between text-[10px] font-bold text-neutral-500">
-                            <span>Speech Pitch</span>
-                            <span>{ttsPitch}</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0.5"
-                            max="2.0"
-                            step="0.1"
-                            value={ttsPitch}
-                            onChange={(e) => setTtsPitch(Number(e.target.value))}
-                            className="w-full h-1.5 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-teal-600 focus:outline-none"
-                            aria-label="Speech Pitch"
-                          />
-                        </div>
+                    {/* Reading Ruler Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label htmlFor="ruler-toggle" className="block text-sm font-semibold text-neutral-700">Reading Ruler</label>
+                        <span className="text-[11px] text-neutral-400 block">Horizontal tracking guide follows cursor</span>
                       </div>
-                    )}
-                  </div>
+                      <button
+                        id="ruler-toggle"
+                        role="switch"
+                        aria-checked={readingRuler}
+                        onClick={() => setReadingRuler(!readingRuler)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${readingRuler ? 'bg-teal-600' : 'bg-neutral-200'
+                          }`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${readingRuler ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
+                      </button>
+                    </div>
 
-                  {/* Nudge Delivery Preferences */}
-                  <div className="border-t pt-3.5">
-                    <label htmlFor="nudge-style-select" className="block text-sm font-semibold text-neutral-700 mb-1.5">
-                      Nudge Delivery Style
-                    </label>
-                    <select
-                      id="nudge-style-select"
-                      value={nudgeStyle}
-                      onChange={(e) => setNudgeStyle(e.target.value as 'toast' | 'glow' | 'push' | 'off')}
-                      className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
-                        highContrast ? 'border-black' : 'border-neutral-200'
-                      }`}
-                    >
-                      <option value="toast">Toast Notification</option>
-                      <option value="glow">Ambient Edge-Glow</option>
-                      <option value="push">Web Push Notification</option>
-                      <option value="off">Off / Disabled</option>
-                    </select>
+                    {/* High Contrast Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label htmlFor="contrast-toggle" className="block text-sm font-semibold text-neutral-700">High Contrast Mode</label>
+                        <span className="text-[11px] text-neutral-400 block">Stark black & white layout borders</span>
+                      </div>
+                      <button
+                        id="contrast-toggle"
+                        role="switch"
+                        aria-checked={highContrast}
+                        onClick={() => setHighContrast(!highContrast)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ? 'bg-teal-600' : 'bg-neutral-200'
+                          }`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${highContrast ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
+                      </button>
+                    </div>
+
+                    {/* Font Scaling Options */}
+                    <div className="border-t pt-3.5">
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Text Zoom Scale</label>
+                      <div className="grid grid-cols-3 gap-1.5 p-1 bg-neutral-50 rounded-lg border border-neutral-100">
+                        {(['normal', 'large', 'extra-large'] as const).map((scale) => (
+                          <button
+                            key={scale}
+                            onClick={() => setFontScale(scale)}
+                            className={`py-1.5 px-2 rounded-md text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${fontScale === scale
+                                ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80 font-bold'
+                                : 'text-neutral-500 hover:text-neutral-800'
+                              }`}
+                          >
+                            {scale === 'normal' && '100%'}
+                            {scale === 'large' && '120%'}
+                            {scale === 'extra-large' && '140%'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Text-to-Speech Toggle & Sliders */}
+                    <div className="border-t pt-3.5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label htmlFor="tts-toggle" className="block text-sm font-semibold text-neutral-700">Text-to-Speech</label>
+                          <span className="text-[11px] text-neutral-400 block">Reads hovered text elements</span>
+                        </div>
+                        <button
+                          id="tts-toggle"
+                          role="switch"
+                          aria-checked={ttsEnabled}
+                          onClick={() => setTtsEnabled(!ttsEnabled)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${ttsEnabled ? 'bg-teal-600' : 'bg-neutral-200'
+                            }`}
+                        >
+                          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${ttsEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`} />
+                        </button>
+                      </div>
+
+                      {ttsEnabled && (
+                        <div className="space-y-2.5 p-2 bg-neutral-50 rounded-lg border border-neutral-100">
+                          <div>
+                            <div className="flex justify-between text-[10px] font-bold text-neutral-500">
+                              <span>Speech Speed</span>
+                              <span>{ttsSpeed}x</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0.5"
+                              max="2.0"
+                              step="0.1"
+                              value={ttsSpeed}
+                              onChange={(e) => setTtsSpeed(Number(e.target.value))}
+                              className="w-full h-1.5 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-teal-600 focus:outline-none"
+                              aria-label="Speech Speed"
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between text-[10px] font-bold text-neutral-500">
+                              <span>Speech Pitch</span>
+                              <span>{ttsPitch}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0.5"
+                              max="2.0"
+                              step="0.1"
+                              value={ttsPitch}
+                              onChange={(e) => setTtsPitch(Number(e.target.value))}
+                              className="w-full h-1.5 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-teal-600 focus:outline-none"
+                              aria-label="Speech Pitch"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Nudge Delivery Preferences */}
+                    <div className="border-t pt-3.5">
+                      <label htmlFor="nudge-style-select" className="block text-sm font-semibold text-neutral-700 mb-1.5">
+                        Nudge Delivery Style
+                      </label>
+                      <select
+                        id="nudge-style-select"
+                        value={nudgeStyle}
+                        onChange={(e) => setNudgeStyle(e.target.value as 'toast' | 'glow' | 'push' | 'off')}
+                        className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                          }`}
+                      >
+                        <option value="toast">Toast Notification</option>
+                        <option value="glow">Ambient Edge-Glow</option>
+                        <option value="push">Web Push Notification</option>
+                        <option value="off">Off / Disabled</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* User Profile Info */}
-        <div className="flex items-center gap-3 pl-2 border-l border-neutral-200">
-          <div className="relative h-9 w-9 rounded-full overflow-hidden border border-neutral-200 shrink-0 select-none bg-neutral-100">
-            {(currentUser?.avatar?.startsWith('data:image') || currentUser?.avatar?.startsWith('http')) ? (
-              <img src={currentUser.avatar} alt="Profile" className="h-full w-full object-cover animate-fade-in" />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center font-bold text-teal-700 text-sm animate-fade-in">
-                {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'U'}
-              </div>
+              </>
             )}
           </div>
-          <div className="hidden sm:block text-left select-none animate-fade-in">
-            <span className="block text-xs font-bold text-neutral-800 leading-none">{currentUser?.name || currentUser?.full_name}</span>
-            <span className="block text-[9px] text-neutral-400 mt-1 font-semibold">{currentUser?.title || currentUser?.job_title}</span>
+
+          {/* User Profile Info */}
+          <div className="flex items-center gap-3 pl-2 border-l border-neutral-200">
+            <div className="relative h-9 w-9 rounded-full overflow-hidden border border-neutral-200 shrink-0 select-none bg-neutral-100">
+              {(currentUser?.avatar?.startsWith('data:image') || currentUser?.avatar?.startsWith('http')) ? (
+                <img src={currentUser.avatar} alt="Profile" className="h-full w-full object-cover animate-fade-in" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center font-bold text-teal-700 text-sm animate-fade-in">
+                  {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'U'}
+                </div>
+              )}
+            </div>
+            <div className="hidden sm:block text-left select-none animate-fade-in">
+              <span className="block text-xs font-bold text-neutral-800 leading-none">{currentUser?.name || currentUser?.full_name}</span>
+              <span className="block text-[9px] text-neutral-400 mt-1 font-semibold">{currentUser?.title || currentUser?.job_title}</span>
+            </div>
+            {/* Sign Out Action */}
+            <button
+              onClick={onLogout}
+              className={`p-1.5 rounded-lg hover:bg-neutral-50 border border-transparent transition focus:outline-none focus:ring-2 focus:ring-red-500`}
+              aria-label={`Log out from ${currentUser?.name || currentUser?.full_name}`}
+              title="Sign Out Account"
+            >
+              <LogOut className="h-4 w-4 text-neutral-400 hover:text-red-500 transition-colors" />
+            </button>
           </div>
-          {/* Sign Out Action */}
-          <button
-            onClick={onLogout}
-            className={`p-1.5 rounded-lg hover:bg-neutral-50 border border-transparent transition focus:outline-none focus:ring-2 focus:ring-red-500`}
-            aria-label={`Log out from ${currentUser?.name || currentUser?.full_name}`}
-            title="Sign Out Account"
-          >
-            <LogOut className="h-4 w-4 text-neutral-400 hover:text-red-500 transition-colors" />
-          </button>
         </div>
-      </div>
-      {/* Picture-in-Picture Local Camera Feed */}
-      {cvActive && (
-        <div className="fixed bottom-6 right-6 w-48 sm:w-64 rounded-xl overflow-hidden border-2 border-teal-500 shadow-2xl z-50 bg-black animate-fade-in">
-          <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
-            <div className="flex items-center gap-1.5">
+      </header>
+
+      {/* Picture-in-Picture Local Camera Feed (Portaled to avoid ALL z-index stacking context constraints) */}
+      {cvActive && mounted && createPortal(
+        <div
+          ref={widgetRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{
+            transform: videoMode === 'fullscreen' ? 'none' : `translate(${position.x}px, ${position.y}px)`,
+            cursor: videoMode === 'fullscreen' ? 'default' : (isDraggingState ? 'grabbing' : 'grab'),
+            transition: isDraggingState ? 'none' : 'width 0.3s, height 0.3s, border-radius 0.3s, opacity 0.3s, transform 0.3s'
+          }}
+          className={`
+          group overflow-hidden shadow-2xl z-[100] bg-black animate-fade-in
+          ${videoMode === 'fullscreen' ? 'fixed inset-0 w-full h-full rounded-none' : ''}
+          ${videoMode === 'bubble' ? 'fixed bottom-6 right-6 w-24 h-24 rounded-full border-2 border-teal-500 shadow-[0_0_15px_rgba(20,184,166,0.5)]' : ''}
+          ${videoMode === 'normal' ? 'fixed bottom-6 right-6 w-48 sm:w-64 rounded-xl border-2 border-teal-500' : ''}
+        `}>
+          {videoMode !== 'bubble' && (
+            <div className={`absolute top-3 left-3 flex items-center gap-1.5 z-10 transition-opacity duration-200 ${videoMode === 'fullscreen' ? 'opacity-100' : 'group-hover:opacity-0 opacity-100'}`}>
               <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               <span className="text-[9px] sm:text-[10px] font-mono text-white font-bold bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
                 LOCAL CV ACTIVE
               </span>
             </div>
-          </div>
+          )}
+
+          {/* Controls */}
+          {videoMode === 'bubble' ? (
+            <div className="absolute inset-0 flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/30 backdrop-blur-[2px]">
+              <button
+                onClick={() => setVideoMode('normal')}
+                className="p-2 bg-black/60 hover:bg-teal-600 rounded-full text-white backdrop-blur-sm transition-colors shadow-sm"
+                title="Normal Size"
+              >
+                <Expand className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {videoMode !== 'fullscreen' && (
+                <button
+                  onClick={() => setVideoMode('fullscreen')}
+                  className="p-1.5 bg-black/60 hover:bg-teal-600 rounded text-white backdrop-blur-sm transition-colors shadow-sm"
+                  title="Full Screen"
+                >
+                  <Maximize className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {videoMode === 'fullscreen' && (
+                <button
+                  onClick={() => setVideoMode('normal')}
+                  className="p-2 bg-black/60 hover:bg-teal-600 rounded text-white backdrop-blur-sm transition-colors shadow-sm"
+                  title="Exit Full Screen"
+                >
+                  <Minimize className="w-5 h-5" />
+                </button>
+              )}
+              <button
+                onClick={() => setVideoMode('bubble')}
+                className={`p-1.5 bg-black/60 hover:bg-teal-600 rounded text-white backdrop-blur-sm transition-colors shadow-sm ${videoMode === 'fullscreen' ? 'p-2' : ''}`}
+                title="Bubble Mode"
+              >
+                <Circle className={videoMode === 'fullscreen' ? 'w-5 h-5' : 'w-3.5 h-3.5'} />
+              </button>
+            </div>
+          )}
+
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="w-full aspect-video object-cover"
+            className={`w-full h-full object-cover transition-all duration-300 -scale-x-100 ${videoMode === 'normal' ? 'aspect-video' : ''}`}
           />
-          <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1">
-            <p className="text-[8px] sm:text-[9px] font-mono text-teal-400 text-center">
-              PROCESSING GAZE & POSTURE
-            </p>
-          </div>
-        </div>
+
+          {videoMode !== 'bubble' && (
+            <div className={`absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1 z-10 transition-opacity duration-200 ${videoMode === 'fullscreen' ? 'opacity-100 p-2' : 'opacity-100 group-hover:opacity-0'}`}>
+              <p className={`font-mono text-teal-400 text-center ${videoMode === 'fullscreen' ? 'text-sm' : 'text-[8px] sm:text-[9px]'}`}>
+                PROCESSING GAZE & POSTURE — 100% IN-BROWSER
+              </p>
+            </div>
+          )}
+        </div>,
+        document.body
       )}
 
       {/* Consent flow modal overlay */}
-      <WebcamCVConsentModal 
+      <WebcamCVConsentModal
         isOpen={isConsentModalOpen}
         onAccept={handleAcceptConsent}
         onDecline={handleDeclineConsent}
       />
-    </header>
+    </>
   );
 }
