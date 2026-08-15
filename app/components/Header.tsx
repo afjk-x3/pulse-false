@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { 
   Accessibility, 
@@ -46,6 +46,9 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   // Load CV active state from Supabase (or fallback to local while transitioning)
   useEffect(() => {
     const fetchConsent = async () => {
@@ -57,10 +60,10 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
           .eq('id', user.id)
           .single();
         if (data) {
-          setCvActive(data.camera_telemetry_consented);
           // Also persist back to localStorage for fallback scripts that might still check it
           localStorage.setItem('pulse-cv-consent', String(data.camera_telemetry_consented));
-          localStorage.setItem('pulse-cv-active', String(data.camera_telemetry_consented));
+          // Do not auto-activate on load; require explicit click each session
+          localStorage.setItem('pulse-cv-active', 'false');
         }
       } else {
         // Fallback for when not fully migrated in page.tsx
@@ -73,6 +76,42 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
     };
     fetchConsent();
   }, []);
+
+  // Handle webcam stream based on cvActive
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (cvActive) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          if (isCancelled) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => console.error("Camera access denied or failed:", err));
+    } else {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    }
+
+    return () => {
+      isCancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [cvActive]);
 
   const updateConsentDB = async (val: boolean) => {
     setLoading(true);
@@ -97,9 +136,6 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
     if (cvActive) {
       setCvActive(false);
       localStorage.setItem('pulse-cv-active', 'false');
-      // If we pause, we aren't revoking consent necessarily, just pausing the stream.
-      // But based on the original logic, pulse-cv-active is separate from pulse-cv-consent.
-      // Since the DB only has `camera_telemetry_consented`, we will tie them together for the DB layer.
       updateConsentDB(false);
       
       setCvTooltipVisible(true);
@@ -107,7 +143,6 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
       return () => clearTimeout(timer);
     } else {
       const consent = localStorage.getItem('pulse-cv-consent') === 'true';
-      // In the new world, if we toggle it back on, we should just show the consent modal if they don't have it.
       if (consent) {
         setCvActive(true);
         localStorage.setItem('pulse-cv-active', 'true');
@@ -450,6 +485,32 @@ export default function Header({ title, currentUser, onLogout }: HeaderProps) {
           </button>
         </div>
       </div>
+      {/* Picture-in-Picture Local Camera Feed */}
+      {cvActive && (
+        <div className="fixed bottom-6 right-6 w-48 sm:w-64 rounded-xl overflow-hidden border-2 border-teal-500 shadow-2xl z-50 bg-black animate-fade-in">
+          <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-[9px] sm:text-[10px] font-mono text-white font-bold bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                LOCAL CV ACTIVE
+              </span>
+            </div>
+          </div>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full aspect-video object-cover"
+          />
+          <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1">
+            <p className="text-[8px] sm:text-[9px] font-mono text-teal-400 text-center">
+              PROCESSING GAZE & POSTURE
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Consent flow modal overlay */}
       <WebcamCVConsentModal 
         isOpen={isConsentModalOpen}
