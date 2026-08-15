@@ -32,6 +32,7 @@ function containsVulgarity(text: string) {
 export default function KudosFeed() {
   const { highContrast } = useAccessibility();
   const [kudosList, setKudosList] = useState<KudosWithProfiles[]>([]);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [profiles, setProfiles] = useState<Record<string, { name: string, role: string }>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('All');
@@ -127,7 +128,16 @@ export default function KudosFeed() {
   };
 
   const handleLike = async (id: string, currentLikes: number) => {
-    // Optimistic UI update could be added here
+    if (likedPosts.has(id)) return;
+
+    // Optimistic UI update
+    setKudosList(prev => prev.map(k => k.id === id ? { ...k, likes_count: currentLikes + 1 } : k));
+    setLikedPosts(prev => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+
     await supabase.from('kudos_posts').update({ likes_count: currentLikes + 1 }).eq('id', id);
   };
 
@@ -323,11 +333,20 @@ export default function KudosFeed() {
                 <span>{new Date(kudos.created_at).toLocaleDateString()}</span>
                 <button
                   onClick={() => handleLike(kudos.id, kudos.likes_count)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-teal-500`}
+                  disabled={likedPosts.has(kudos.id)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-all ${
+                    likedPosts.has(kudos.id) ? '' : 'hover:bg-neutral-50 focus:ring-2 focus:ring-teal-500'
+                  } focus:outline-none`}
                   aria-label={`Like this kudos. Current likes: ${kudos.likes_count}`}
                 >
-                  <Heart className="h-3.5 w-3.5 text-neutral-400 hover:text-teal-600 hover:fill-teal-600" />
-                  <span>{kudos.likes_count} {kudos.likes_count === 1 ? 'Like' : 'Likes'}</span>
+                  <Heart className={`h-3.5 w-3.5 ${
+                    likedPosts.has(kudos.id) 
+                      ? 'fill-teal-600 text-teal-600' 
+                      : 'text-neutral-400 hover:text-teal-600 hover:fill-teal-600'
+                  }`} />
+                  <span className={likedPosts.has(kudos.id) ? 'text-teal-700 font-bold' : ''}>
+                    {kudos.likes_count} {kudos.likes_count === 1 ? 'Like' : 'Likes'}
+                  </span>
                 </button>
               </div>
             </article>
