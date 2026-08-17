@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Key, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video, Users, UserCheck, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
@@ -24,6 +25,7 @@ export default function AdminConsole() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const router = useRouter();
 
   // Settings Form states
   const [startHours, setStartHours] = useState('09:00');
@@ -52,15 +54,7 @@ export default function AdminConsole() {
   // CV global toggle
   const [cvGlobalDisabled, setCvGlobalDisabled] = useState(false);
 
-  // Admin Override Provisioning Form states
-  const [newFullName, setNewFullName] = useState('');
-  const [newJobTitle, setNewJobTitle] = useState('');
-  const [newRole, setNewRole] = useState<'employee' | 'manager' | 'admin'>('employee');
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [isProvisioning, setIsProvisioning] = useState(false);
-  const [provisionSuccess, setProvisionSuccess] = useState(false);
-  const [provisionError, setProvisionError] = useState('');
+
 
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
@@ -80,7 +74,8 @@ export default function AdminConsole() {
 
       const role = (profile?.role || '').toLowerCase();
       if (!profile || role !== 'admin') {
-        throw new Error('Access Denied: You do not have the required Administrator permissions.');
+        router.replace('/');
+        return;
       }
 
       setCurrentUser(user);
@@ -322,67 +317,6 @@ export default function AdminConsole() {
     URL.revokeObjectURL(url);
   };
 
-  const handleProvision = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProvisionError('');
-    setProvisionSuccess(false);
-
-    if (!newFullName || !newJobTitle || !newEmail) {
-      setProvisionError('Full Name, Job Title, and Work Email are required.');
-      return;
-    }
-    if (!newPassword || newPassword.length < 8) {
-      setProvisionError('A temporary password of at least 8 characters is required.');
-      return;
-    }
-
-    setIsProvisioning(true);
-    try {
-      let emailToUse = newEmail.trim();
-      if (!emailToUse.includes('@')) {
-        emailToUse = `${emailToUse}@pulseaxionhr.com`;
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: emailToUse,
-        password: newPassword.trim(),
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('User creation failed — no user returned.');
-
-      const parts = newFullName.trim().split(' ');
-      const initials = parts.map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'EM';
-
-      const { error: profileError } = await supabase.from('user_profiles').insert({
-        id: authData.user.id,
-        full_name: newFullName.trim(),
-        email: emailToUse,
-        job_title: newJobTitle.trim(),
-        avatar: initials,
-        role: newRole,
-        status: 'active',
-      });
-
-      if (profileError) throw profileError;
-
-      await logAuditAction(`Provisioned new ${newRole} account: ${emailToUse}`, 'user_profiles');
-
-      setProvisionSuccess(true);
-      setNewFullName('');
-      setNewJobTitle('');
-      setNewEmail('');
-      setNewPassword('');
-      setNewRole('employee');
-      setTimeout(() => setProvisionSuccess(false), 4000);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Provisioning failed. Please try again.';
-      setProvisionError(message);
-    } finally {
-      setIsProvisioning(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="p-12 flex justify-center items-center h-full">
@@ -407,36 +341,36 @@ export default function AdminConsole() {
   if (!config) {
     return (
       <div className="p-8 text-center text-xs text-neutral-400">
-        Loading HR/IT Admin preferences...
+        Loading Admin preferences...
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Intro Header */}
-      <div className={`p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+      <div className={`p-6 glass-card rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
         }`}>
         <div className="space-y-1.5">
-          <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
+          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
             <Sliders className="h-5.5 w-5.5 text-teal-600" />
-            <span>HR/IT Admin Console</span>
+            <span>Admin Console</span>
           </h2>
           <p className="text-xs text-neutral-500 leading-relaxed max-w-2xl">
             Configure org-wide working hour boundaries, privacy floors for team data aggregation, local EAP referral destinations, and manage emergency system overrides.
           </p>
         </div>
 
-        <span className="px-3 py-1 bg-neutral-900 text-white rounded-full text-[10px] font-bold shrink-0">
-          ROLE: HR ADMINISTRATOR
+        <span className="px-3 py-1 bg-teal-600 text-white rounded-full text-[10px] font-bold shrink-0">
+          ROLE: ADMINISTRATOR
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-min mb-6">
         {/* Settings Data Grid Form (2 cols) */}
         <form
           onSubmit={handleSaveSettings}
-          className={`p-6 bg-white rounded-2xl border lg:col-span-2 space-y-5 flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+          className={`p-6 glass-card rounded-2xl border md:col-span-2 xl:col-span-2 space-y-5 flex flex-col justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
             }`}
         >
           <div className="space-y-4">
@@ -456,7 +390,7 @@ export default function AdminConsole() {
                   required
                   value={startHours}
                   onChange={(e) => setStartHours(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 />
               </div>
@@ -472,7 +406,7 @@ export default function AdminConsole() {
                   required
                   value={endHours}
                   onChange={(e) => setEndHours(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 />
               </div>
@@ -486,7 +420,7 @@ export default function AdminConsole() {
                   id="calendar-select"
                   value={calendar}
                   onChange={(e) => setCalendar(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 >
                   <option value="US Federal">US Federal Calendar</option>
@@ -506,7 +440,7 @@ export default function AdminConsole() {
                   id="floor-select"
                   value={floor}
                   onChange={(e) => setFloor(Number(e.target.value))}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 >
                   <option value="5">Minimum 5 team members required (Standard)</option>
@@ -529,7 +463,7 @@ export default function AdminConsole() {
                 placeholder="e.g. https://company.intranet/eap-wellbeing"
                 value={eap}
                 onChange={(e) => setEap(e.target.value)}
-                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                   }`}
               />
             </div>
@@ -562,7 +496,7 @@ export default function AdminConsole() {
         </form>
 
         {/* System Paused Red Kill Switch (1 col) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between items-center text-center ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        <div className={`p-6 glass-card rounded-2xl border flex flex-col justify-between items-center text-center transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
           }`}>
           <div className="space-y-4 w-full">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -572,7 +506,7 @@ export default function AdminConsole() {
             {/* Red Octagon Shield */}
             <div className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto border-2 ${config.emergency_kill_switch
               ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
-              : 'bg-neutral-50 text-neutral-400 border-neutral-200'
+              : 'bg-neutral-50 text-neutral-400 border-border-color'
               }`}>
               <AlertOctagon className="h-10 w-10 stroke-[2.2]" />
             </div>
@@ -605,7 +539,7 @@ export default function AdminConsole() {
       </div>
 
       {/* ===== Webcam CV Global Kill Switch ===== */}
-      <div className={`p-6 bg-white rounded-2xl border ${highContrast ? 'border-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border transition-colors duration-300 ${highContrast ? 'border-black' : 'border-border-color'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-full flex items-center justify-center border-2 ${cvGlobalDisabled ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
@@ -623,7 +557,7 @@ export default function AdminConsole() {
             aria-checked={!cvGlobalDisabled}
             aria-label="Toggle org-wide webcam CV"
           >
-            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${cvGlobalDisabled ? 'translate-x-1' : 'translate-x-6'}`} />
+            <span className={`inline-block h-4 w-4 rounded-full glass-card shadow-sm transition-transform ${cvGlobalDisabled ? 'translate-x-1' : 'translate-x-6'}`} />
           </button>
         </div>
       </div>
@@ -631,10 +565,10 @@ export default function AdminConsole() {
 
 
       {/* ===== Security Configuration ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border space-y-5 transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
           <ShieldAlert className="h-5 w-5 text-teal-600" />
-          <h3 className="text-base font-bold text-neutral-800">Security &amp; Compliance Configuration</h3>
+          <h3 className="text-base font-bold text-foreground">Security &amp; Compliance Configuration</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -645,7 +579,7 @@ export default function AdminConsole() {
               id="sso-provider-select"
               value={ssoProvider}
               onChange={(e) => setSsoProvider(e.target.value as 'none' | 'okta' | 'entra_id')}
-              className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'}`}
             >
               <option value="none">None (Password Auth)</option>
               <option value="okta">Okta</option>
@@ -660,7 +594,7 @@ export default function AdminConsole() {
               id="data-residency-select"
               value={dataResidency}
               onChange={(e) => setDataResidency(e.target.value as 'US' | 'EU' | 'APAC')}
-              className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'}`}
             >
               <option value="US">United States</option>
               <option value="EU">European Union</option>
@@ -677,7 +611,7 @@ export default function AdminConsole() {
               placeholder="e.g. https://kms.company.com/keys/pulse-prod"
               value={kmsKeyUrl}
               onChange={(e) => setKmsKeyUrl(e.target.value)}
-              className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'}`}
             />
           </div>
         </div>
@@ -695,7 +629,7 @@ export default function AdminConsole() {
             aria-checked={scimEnabled}
             aria-label="Toggle SCIM sync"
           >
-            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${scimEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span className={`inline-block h-4 w-4 rounded-full glass-card shadow-sm transition-transform ${scimEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
 
@@ -719,124 +653,10 @@ export default function AdminConsole() {
         </div>
       </div>
 
-      {/* ===== Account Distribution (Admin Override) ===== */}
-      <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
-        <form onSubmit={handleProvision} className="space-y-4">
-          <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
-            <Users className="h-5 w-5 text-teal-600" />
-            <h3 className="text-base font-bold text-neutral-800">Account Distribution (Admin Override)</h3>
-          </div>
 
-          <p className="text-xs text-neutral-500 leading-relaxed">
-            Backup path for provisioning Employee, Manager, or Admin accounts. Managers should use their dashboard for standard employee onboarding.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label htmlFor="prov-name" className="block text-xs font-bold text-neutral-700 mb-1">Full Name</label>
-              <input
-                id="prov-name"
-                type="text"
-                required
-                placeholder="e.g. Sarah Connor"
-                value={newFullName}
-                onChange={(e) => setNewFullName(e.target.value)}
-                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="prov-title" className="block text-xs font-bold text-neutral-700 mb-1">Job Title</label>
-              <input
-                id="prov-title"
-                type="text"
-                required
-                placeholder="e.g. UX Engineer"
-                value={newJobTitle}
-                onChange={(e) => setNewJobTitle(e.target.value)}
-                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="prov-role" className="block text-xs font-bold text-neutral-700 mb-1">Account Role</label>
-              <select
-                id="prov-role"
-                required
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as 'employee' | 'manager' | 'admin')}
-                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
-              >
-                <option value="employee">Employee</option>
-                <option value="manager">Manager</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="prov-email" className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
-              <div className="flex items-center">
-                <input
-                  id="prov-email"
-                  type="text"
-                  required
-                  placeholder="sarah"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  className={`flex-1 p-2.5 rounded-l-lg border border-r-0 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
-                />
-                <span className={`p-2.5 rounded-r-lg border border-l-0 text-xs bg-neutral-50 text-neutral-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}>
-                  @pulseaxionhr.com
-                </span>
-              </div>
-            </div>
-
-            <div className="md:col-span-2">
-              <label htmlFor="prov-password" className="block text-xs font-bold text-neutral-700 mb-1">Temporary Password <span className="text-red-500">*</span></label>
-              <input
-                id="prov-password"
-                type="text"
-                required
-                placeholder="Minimum 8 characters"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
-              />
-            </div>
-          </div>
-
-          {provisionError && (
-            <div className="p-2.5 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-700 flex items-start gap-1.5 font-semibold leading-normal mt-4">
-              <ShieldAlert className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
-              <span>{provisionError}</span>
-            </div>
-          )}
-
-          {provisionSuccess && (
-            <div className="p-2.5 bg-teal-50 border border-teal-150 rounded-lg text-[10px] text-teal-850 flex items-start gap-1.5 font-semibold leading-normal mt-4">
-              <UserCheck className="h-4.5 w-4.5 text-teal-600 shrink-0 mt-0.5" />
-              <span>Account provisioned successfully! This user can now sign in from the login page.</span>
-            </div>
-          )}
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isProvisioning}
-              className={`w-auto px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${highContrast
-                ? 'bg-black text-white hover:bg-neutral-800'
-                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-                }`}
-            >
-              <Plus className="h-4.5 w-4.5" />
-              <span>{isProvisioning ? 'Provisioning...' : 'Provision Profile'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
 
       {/* ===== Module Opt-in Analytics ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
           <BarChart3 className="h-5 w-5 text-teal-600" />
           <h3 className="text-base font-bold text-neutral-800">Module Opt-in Analytics</h3>
@@ -863,7 +683,7 @@ export default function AdminConsole() {
       </div>
 
       {/* ===== Compliance Audit Log ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center justify-between border-b pb-3 border-neutral-100">
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-teal-600" />

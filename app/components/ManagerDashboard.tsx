@@ -230,9 +230,9 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Analytics Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-min mb-6">
         {/* Team Workload & Wellbeing Trend (2 cols) */}
-        <div className={`p-6 bg-white rounded-2xl border relative overflow-hidden lg:col-span-2 min-h-[300px] flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        <div className={`p-6 glass-card rounded-2xl border relative overflow-hidden md:col-span-2 xl:col-span-2 min-h-[300px] flex flex-col justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
           }`}>
           <div>
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">
@@ -329,9 +329,9 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Account Provisioning & Employee Directory Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Onboarding Form Card (1 col) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        <div className={`p-6 glass-card rounded-2xl border flex flex-col justify-between transition-colors duration-300 md:col-span-1 xl:col-span-1 ${highContrast ? 'border-black text-black' : 'border-border-color'
           }`}>
           <form onSubmit={handleProvision} className="space-y-4">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
@@ -442,7 +442,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Directory List Card (2 cols) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between xl:col-span-2 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        <div className={`p-6 glass-card rounded-2xl border flex flex-col justify-between md:col-span-1 xl:col-span-2 transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
           }`}>
           <div className="space-y-4 w-full">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
