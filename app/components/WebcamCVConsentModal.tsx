@@ -23,7 +23,7 @@ export default function WebcamCVConsentModal({ isOpen, onAccept, onDecline}: Web
  aria-labelledby="consent-modal-title"
  aria-describedby="consent-modal-desc"
  >
- <div className={`w-full max-w-lg p-6 glass-card rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+ <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
  highContrast ?'border-black text-black' :'border-neutral-100'
 }`}>
  {/* Header */}

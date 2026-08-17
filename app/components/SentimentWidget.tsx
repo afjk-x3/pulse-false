@@ -180,7 +180,7 @@ export default function SentimentWidget({ onLogSaved}: SentimentWidgetProps) {
 
  return (
  <div
- className={`fixed bottom-6 right-6 z-40 w-80 p-5 rounded-2xl glass-card shadow-2xl border transition-all duration-300 ${
+ className={`fixed bottom-6 right-6 z-40 w-80 p-5 rounded-2xl bg-white shadow-2xl border transition-all duration-300 ${
  highContrast ?'border-black text-black' :'border-neutral-100'
 }`}
  role="complementary"

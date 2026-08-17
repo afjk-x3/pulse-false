@@ -251,7 +251,7 @@ export default function PrivacyCenter() {
  aria-labelledby="purge-title"
  aria-describedby="purge-desc"
  >
- <div className={`w-full max-w-md p-6 glass-card rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+ <div className={`w-full max-w-md p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
  highContrast ?'border-black text-black' :'border-neutral-100'
 }`}>
  {/* Header */}

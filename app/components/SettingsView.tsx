@@ -274,7 +274,7 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  {/* Crop Modal Overlay */}
  {isCropModalOpen && imageToCrop && (
  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
- <div className="glass-card rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-scale-up">
+ <div className="bg-white border border-neutral-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-scale-up">
  <div className="p-4 border-b border-neutral-100 flex justify-between items-center">
  <h3 className="font-bold text-neutral-800 text-sm">Crop Avatar Image</h3>
  <button onClick={() => setIsCropModalOpen(false)} className="text-neutral-400 hover:text-black transition">

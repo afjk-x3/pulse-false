@@ -189,7 +189,7 @@ export default function ManagerDashboard() {
   return (
     <div className="space-y-6">
       {/* Intro Header */}
-      <div className={`p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+      <div className={`p-6 bg-card-bg rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${highContrast ? 'border-black text-black' : 'border-border-color'
         }`}>
         <div className="space-y-1.5">
           <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
@@ -210,7 +210,7 @@ export default function ManagerDashboard() {
             <button
               onClick={() => setResponseCount(3)}
               className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${responseCount < kanonFloor
-                  ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80'
+                  ? 'bg-card-bg text-neutral-900 shadow-sm border border-neutral-200/80'
                   : 'text-neutral-500 hover:text-neutral-800'
                 }`}
             >
@@ -219,7 +219,7 @@ export default function ManagerDashboard() {
             <button
               onClick={() => setResponseCount(kanonFloor + 2)}
               className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${responseCount >= kanonFloor
-                  ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80'
+                  ? 'bg-card-bg text-neutral-900 shadow-sm border border-neutral-200/80'
                   : 'text-neutral-500 hover:text-neutral-800'
                 }`}
             >
@@ -262,7 +262,7 @@ export default function ManagerDashboard() {
             {/* k-Anonymity overlay */}
             {responseCount < kanonFloor && (
               <div
-                className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md bg-white/70 animate-fade-in"
+                className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md bg-card-bg/70 animate-fade-in"
                 role="alert"
               >
                 <div className="h-10 w-10 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-500 flex items-center justify-center mb-3">
@@ -284,7 +284,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Right-to-Disconnect adherence (1 col) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        <div className={`p-6 bg-card-bg rounded-2xl border flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-border-color'
           }`}>
           <div className="space-y-4">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -355,7 +355,7 @@ export default function ManagerDashboard() {
                   placeholder="e.g. Sarah Connor"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-card-bg focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
                 />
               </div>
@@ -372,7 +372,7 @@ export default function ManagerDashboard() {
                   placeholder="e.g. UX Engineer"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-card-bg focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
                 />
               </div>
@@ -389,7 +389,7 @@ export default function ManagerDashboard() {
                   placeholder="e.g. sarah@axionhr.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-card-bg focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
                 />
               </div>
@@ -406,7 +406,7 @@ export default function ManagerDashboard() {
                   placeholder="e.g. Welcome123!"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-card-bg focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
                     }`}
                 />
               </div>
@@ -509,7 +509,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Suggested Icebreakers / Prompts */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-4 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+      <div className={`p-6 bg-card-bg rounded-2xl border space-y-4 ${highContrast ? 'border-black text-black' : 'border-border-color'
         }`}>
         <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
           Contextual Manager Conversation Starters
@@ -541,7 +541,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* ===== Direct Reports — Shared BRI Trends ===== */}
-      <div className={`p-6 bg-white rounded-2xl border ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 bg-card-bg rounded-2xl border ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center gap-2 border-b pb-3 mb-5 border-neutral-100">
           <TrendingUp className="h-5 w-5 text-teal-600" />
           <h3 className="text-base font-bold text-neutral-800">Direct Reports — Shared BRI Trends</h3>
@@ -617,7 +617,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* ===== Scheduled Meetings (Calendar Guard Audit) ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-4 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 bg-card-bg rounded-2xl border space-y-4 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center gap-2 border-b pb-3 mb-5 border-neutral-100">
           <Calendar className="h-5 w-5 text-teal-600" />
           <h3 className="text-base font-bold text-neutral-800">Team Scheduled Meetings (Calendar Guard Adherence)</h3>

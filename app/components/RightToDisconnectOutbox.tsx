@@ -330,7 +330,7 @@ export default function RightToDisconnectOutbox({ onRefreshStats, refreshTrigger
  aria-labelledby="modal-title"
  aria-describedby="modal-desc"
  >
- <div className={`w-full max-w-md p-6 glass-card rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+ <div className={`w-full max-w-md p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
  highContrast ?'border-black text-black' :'border-neutral-100'
 }`}>
  {/* Modal Header */}

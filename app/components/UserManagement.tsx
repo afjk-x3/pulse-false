@@ -183,7 +183,7 @@ export default function UserManagement() {
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
-            <div className={`p-6 glass-card rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
+            <div className={`p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
                 <div className="space-y-1.5">
                     <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                         <UserCog className="h-5.5 w-5.5 text-teal-600" />
@@ -198,7 +198,7 @@ export default function UserManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-min mb-6">
                 
                 {/* Users Directory Table */}
-                <div className={`p-6 glass-card rounded-2xl border md:col-span-2 xl:col-span-2 space-y-5 transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
+                <div className={`p-6 bg-white rounded-2xl border md:col-span-2 xl:col-span-2 space-y-5 transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
                     <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-b pb-4 border-neutral-100">
                         <h3 className="text-sm font-bold text-neutral-800">Org Directory</h3>
                         <div className="relative w-full md:w-64">
@@ -290,7 +290,7 @@ export default function UserManagement() {
                 </div>
 
                 {/* Provisioning Form Panel */}
-                <div className={`p-6 glass-card rounded-2xl border space-y-5 flex flex-col transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
+                <div className={`p-6 bg-white rounded-2xl border space-y-5 flex flex-col transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
                     <div className="space-y-1 border-b pb-3 border-neutral-100">
                         <h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
                             <Plus className="h-4 w-4 text-teal-600" />

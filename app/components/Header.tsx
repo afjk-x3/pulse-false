@@ -244,8 +244,8 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
 
  return (
  <>
- <header className={`sticky top-0 right-0 z-20 flex h-20 items-center justify-between px-6 lg:px-8 glass-card border-b select-none ${highContrast
- ?'border-black glass-card text-black'
+ <header className={`sticky top-0 right-0 z-50 flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${highContrast
+ ?'border-black bg-white text-black'
  :'border-border-color'
 }`}>
  {/* Page Title & Breadcrumb (Responsive margin for mobile burger) */}
@@ -293,7 +293,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
 
  {/* Micro-Telemetry status explanation tooltips */}
  {cvTooltipVisible && (
- <div className={`absolute right-0 mt-3.5 w-72 p-3.5 rounded-lg border glass-card shadow-lg text-xs leading-relaxed z-50 text-neutral-600 ${highContrast ?'border-black text-black font-bold' :'border-border-color'
+ <div className={`absolute right-0 mt-3.5 w-72 p-3.5 rounded-lg border bg-white shadow-lg text-xs leading-relaxed z-50 text-neutral-600 ${highContrast ?'border-black text-black font-bold' :'border-border-color'
 }`}>
  <div className="flex items-center gap-1.5 font-semibold text-neutral-800 mb-1">
  <Sparkles className="h-4 w-4 text-teal-600" />
@@ -336,7 +336,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  {/* Overlay blocker for outside clicks */}
  <div className="fixed inset-0 z-40" onClick={() => setIsNotifMenuOpen(false)} />
 
- <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border glass-card shadow-xl z-50 transition-all ${highContrast ?'border-black text-black' :'border-border-color'
+ <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border bg-white shadow-xl z-50 transition-all ${highContrast ?'border-black text-black' :'border-border-color'
 }`}>
  <div className="flex items-center justify-between border-b pb-3 mb-4">
  <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  <div 
  key={notif.id} 
  onClick={() => setNotifications(notifications.map(n => n.id === notif.id ? { ...n, read: true} : n))}
- className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${notif.read ?'glass-card border-border-color hover:bg-neutral-50' :'bg-teal-50 border-teal-200 hover:bg-teal-100/50'} ${highContrast ?'border-black' :''}`}
+ className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${notif.read ?'bg-white border-border-color hover:bg-neutral-50' :'bg-teal-50 border-teal-200 hover:bg-teal-100/50'} ${highContrast ?'border-black' :''}`}
  role="button"
  tabIndex={0}
  onKeyDown={(e) => {
@@ -410,7 +410,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  {/* Overlay blocker for outside clicks */}
  <div className="fixed inset-0 z-40" onClick={() => setIsAccessMenuOpen(false)} />
 
- <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border glass-card shadow-xl z-50 transition-all ${highContrast ?'border-black text-black' :'border-border-color'
+ <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border bg-white shadow-xl z-50 transition-all ${highContrast ?'border-black text-black' :'border-border-color'
 }`}>
  <div className="flex items-center justify-between border-b pb-3 mb-4">
  <div className="flex items-center gap-2">
@@ -441,7 +441,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${openDyslexic ?'bg-teal-600' :'bg-neutral-200'
 }`}
  >
- <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full glass-card shadow-sm ring-0 transition duration-200 ease-in-out ${openDyslexic ?'translate-x-5' :'translate-x-0'
+ <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${openDyslexic ?'translate-x-5' :'translate-x-0'
 }`} />
  </button>
  </div>
@@ -460,7 +460,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${readingRuler ?'bg-teal-600' :'bg-neutral-200'
 }`}
  >
- <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full glass-card shadow-sm ring-0 transition duration-200 ease-in-out ${readingRuler ?'translate-x-5' :'translate-x-0'
+ <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${readingRuler ?'translate-x-5' :'translate-x-0'
 }`} />
  </button>
  </div>
@@ -479,7 +479,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ?'bg-teal-600' :'bg-neutral-200'
 }`}
  >
- <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full glass-card shadow-sm ring-0 transition duration-200 ease-in-out ${highContrast ?'translate-x-5' :'translate-x-0'
+ <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${highContrast ?'translate-x-5' :'translate-x-0'
 }`} />
  </button>
  </div>
@@ -493,7 +493,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  key={scale}
  onClick={() => setFontScale(scale)}
  className={`py-1.5 px-2 rounded-md text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${fontScale === scale
- ?'glass-card text-neutral-900 shadow-sm border border-border-color font-bold'
+ ?'bg-white text-neutral-900 shadow-sm border border-border-color font-bold'
  :'text-neutral-500 hover:text-neutral-800'
 }`}
  >
@@ -520,7 +520,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${ttsEnabled ?'bg-teal-600' :'bg-neutral-200'
 }`}
  >
- <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full glass-card shadow-sm ring-0 transition duration-200 ease-in-out ${ttsEnabled ?'translate-x-5' :'translate-x-0'
+ <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${ttsEnabled ?'translate-x-5' :'translate-x-0'
 }`} />
  </button>
  </div>
@@ -573,7 +573,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  id="nudge-style-select"
  value={nudgeStyle}
  onChange={(e) => setNudgeStyle(e.target.value as'toast' |'glow' |'push' |'off')}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
+ className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
 }`}
  >
  <option value="toast">Toast Notification</option>

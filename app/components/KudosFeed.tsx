@@ -362,7 +362,7 @@ export default function KudosFeed() {
  aria-modal="true"
  aria-labelledby="composer-title"
  >
- <div className={`w-full max-w-lg p-6 glass-card rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+ <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
  highContrast ?'border-black text-black' :'border-neutral-150'
 }`}>
  <div className="flex items-center justify-between border-b pb-3 mb-4">
@@ -407,12 +407,12 @@ export default function KudosFeed() {
 }}
  onFocus={() => setShowRecipientDropdown(true)}
  onBlur={() => setTimeout(() => setShowRecipientDropdown(false), 200)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
+ className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
  highContrast ?'border-black' :'border-border-color'
 }`}
  />
  {showRecipientDropdown && recipientSearch && (
- <ul className="absolute z-10 w-full mt-1 glass-card border border-border-color rounded-lg shadow-lg max-h-48 overflow-y-auto">
+ <ul className="absolute z-10 w-full mt-1 bg-white border border-border-color rounded-lg shadow-lg max-h-48 overflow-y-auto">
  {Object.entries(profiles)
  .filter(([id, profile]) => id !== currentUser?.id && profile.role !=='admin' && profile.name.toLowerCase().includes(recipientSearch.toLowerCase()))
  .map(([id, profile]) => (

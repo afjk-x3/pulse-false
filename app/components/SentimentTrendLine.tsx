@@ -274,7 +274,7 @@ export default function SentimentTrendLine({ refreshTrigger}: SentimentTrendLine
 
  {/* Interactive node hover overlays */}
  {hoveredPoint && (
- <div className={`absolute top-0 right-0 py-1 px-2.5 rounded-lg border glass-card shadow-md text-[10px] leading-tight font-bold z-10 text-neutral-700 animate-fade-in ${
+ <div className={`absolute top-0 right-0 py-1 px-2.5 rounded-lg border bg-white shadow-md text-[10px] leading-tight font-bold z-10 text-neutral-700 animate-fade-in ${
  highContrast ?'border-black' :'border-border-color'
 }`}>
  <span>{hoveredPoint.label}: {hoveredPoint.score} — {getMoodLabel(hoveredPoint.score)}</span>

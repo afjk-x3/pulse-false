@@ -147,8 +147,8 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger}: Bur
  {/* Information Tooltip overlay */}
  {showTooltip && (
  <div
- className={`absolute left-0 mt-2.5 w-72 p-4 rounded-xl border glass-card shadow-xl text-xs z-20 text-neutral-600 leading-relaxed ${
- highContrast ?'border-black text-black font-bold' :'border-border-color'
+ className={`absolute left-0 mt-2.5 w-72 p-4 rounded-xl border bg-white shadow-xl text-xs z-20 text-neutral-600 leading-relaxed ${
+ highContrast ?'border-black text-black' :'border-border-color'
 }`}
  >
  <h3 className="font-bold text-neutral-800 mb-1">How is this calculated?</h3>

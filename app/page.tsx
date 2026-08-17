@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import BurnoutRiskIndex from './components/BurnoutRiskIndex';
@@ -10,12 +10,14 @@ import CalendarGuard from './components/CalendarGuard';
 import BRIExplanationFeed from './components/BRIExplanationFeed';
 
 import { useAccessibility } from './context/AccessibilityContext';
-import { Heart, ThumbsUp, Inbox } from 'lucide-react';
+import { Heart, ThumbsUp, Inbox, Moon } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
+import WindDownRoutine from './components/WindDownRoutine';
 
 export default function Home() {
   const { highContrast } = useAccessibility();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isWindDownOpen, setIsWindDownOpen] = useState(false);
 
   // Quick stats states
   const [outboxCount, setOutboxCount] = useState(0);
@@ -68,28 +70,39 @@ export default function Home() {
         </div>
 
         {/* Micro Analytics Banner Row */}
-        <div className="flex flex-wrap gap-4 shrink-0">
-          <div className="px-3.5 py-2.5 rounded-xl bg-neutral-50/50 border border-neutral-100 flex items-center gap-2 text-xs">
-            <Inbox className="h-4.5 w-4.5 text-teal-600" />
-            <div>
-              <span className="block text-[10px] text-neutral-400 font-semibold uppercase">Queued Mail</span>
-              <span className="font-bold text-neutral-700">{outboxCount} locked</span>
+        <div className="flex items-center gap-4 shrink-0 flex-wrap md:flex-nowrap">
+          <div className="flex flex-wrap gap-4 shrink-0">
+            <div className="px-3.5 py-2.5 rounded-xl bg-neutral-50/50 border border-neutral-100 flex items-center gap-2 text-xs">
+              <Inbox className="h-4.5 w-4.5 text-teal-600" />
+              <div>
+                <span className="block text-[10px] text-neutral-400 font-semibold uppercase">Queued Mail</span>
+                <span className="font-bold text-neutral-700">{outboxCount} locked</span>
+              </div>
+            </div>
+            <div className="px-3.5 py-2.5 rounded-xl bg-neutral-50/50 border border-neutral-100 flex items-center gap-2 text-xs">
+              <ThumbsUp className="h-4.5 w-4.5 text-teal-600" />
+              <div>
+                <span className="block text-[10px] text-neutral-400 font-semibold uppercase">Kudos Shared</span>
+                <span className="font-bold text-neutral-700">{kudosCount} notes</span>
+              </div>
+            </div>
+            <div className="px-3.5 py-2.5 rounded-xl bg-neutral-50/50 border border-neutral-100 flex items-center gap-2 text-xs">
+              <Heart className="h-4.5 w-4.5 text-teal-600" />
+              <div>
+                <span className="block text-[10px] text-neutral-400 font-semibold uppercase">Sentiment Checks</span>
+                <span className="font-bold text-neutral-700">{sentimentCount} logs</span>
+              </div>
             </div>
           </div>
-          <div className="px-3.5 py-2.5 rounded-xl bg-neutral-50/50 border border-neutral-100 flex items-center gap-2 text-xs">
-            <ThumbsUp className="h-4.5 w-4.5 text-teal-600" />
-            <div>
-              <span className="block text-[10px] text-neutral-400 font-semibold uppercase">Kudos Shared</span>
-              <span className="font-bold text-neutral-700">{kudosCount} notes</span>
-            </div>
-          </div>
-          <div className="px-3.5 py-2.5 rounded-xl bg-neutral-50/50 border border-neutral-100 flex items-center gap-2 text-xs">
-            <Heart className="h-4.5 w-4.5 text-teal-600" />
-            <div>
-              <span className="block text-[10px] text-neutral-400 font-semibold uppercase">Sentiment Checks</span>
-              <span className="font-bold text-neutral-700">{sentimentCount} logs</span>
-            </div>
-          </div>
+          
+          <div className="h-10 w-px bg-neutral-200 hidden md:block"></div>
+          
+          <button 
+            onClick={() => setIsWindDownOpen(true)}
+            className="px-4 py-2.5 bg-neutral-800 text-white rounded-xl hover:bg-black transition-colors font-medium flex items-center gap-2 text-sm shadow-sm"
+          >
+             <Moon className="w-4 h-4 text-teal-400" /> Wind-Down
+          </button>
         </div>
       </div>
 
@@ -144,6 +157,13 @@ export default function Home() {
         </div>
 
       </div>
+
+      <WindDownRoutine 
+        isOpen={isWindDownOpen} 
+        onClose={() => setIsWindDownOpen(false)} 
+        userProfile={userProfile} 
+        outboxCount={outboxCount} 
+      />
     </div>
   );
 }

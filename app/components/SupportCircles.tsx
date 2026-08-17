@@ -406,7 +406,7 @@ export default function SupportCircles() {
  aria-labelledby="discover-modal-title"
  aria-describedby="discover-modal-desc"
  >
- <div className={`w-full max-w-2xl p-6 glass-card rounded-2xl border shadow-2xl space-y-4.5 animate-scale-up ${highContrast ?'border-black text-black' :'border-neutral-100'
+ <div className={`w-full max-w-2xl p-6 bg-white rounded-2xl border shadow-2xl space-y-4.5 animate-scale-up ${highContrast ?'border-black text-black' :'border-neutral-100'
 }`}>
  {/* Header */}
  <div className="flex items-center justify-between border-b pb-3 border-neutral-100">
@@ -511,7 +511,7 @@ export default function SupportCircles() {
  <>
  <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 animate-fade-in" onClick={() => setIsCreateModalOpen(false)} />
  <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
- <div className={`w-full max-w-md glass-card rounded-2xl shadow-2xl border pointer-events-auto flex flex-col max-h-[85vh] animate-slide-up-fade ${highContrast ?'border-2 border-black' :'border-neutral-100'
+ <div className={`w-full max-w-md bg-white rounded-2xl shadow-2xl border pointer-events-auto flex flex-col max-h-[85vh] animate-slide-up-fade ${highContrast ?'border-2 border-black' :'border-neutral-100'
 }`}>
  <div className={`p-4 border-b flex items-center justify-between ${highContrast ?'border-black' :'border-neutral-100'}`}>
  <h3 className="font-bold text-neutral-800 flex items-center gap-2">
