@@ -2,11 +2,18 @@
 @import url('https://fonts.cdnfonts.com/css/opendyslexic');
 @import "tailwindcss";
 
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card-bg: var(--card-bg);
+  --color-border-color: var(--border-color);
+}
+
 :root {
-  --background: #FAF9F6;      /* Warm off-white background */
-  --foreground: #262626;      /* Dark charcoal grey text */
-  --card-bg: #ffffff;         /* Pure white cards */
-  --border-color: #f1f0ea;    /* Soft warm-grey borders */
+  --background: #f4f6f8;      
+  --foreground: #1c252e;      
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --border-color: rgba(255, 255, 255, 0.5);
   
   --sage-bg: #EAEFE9;
   --sage-border: #C3D2C1;
@@ -22,11 +29,19 @@
 }
 
 body {
-  background: var(--background);
+  background-color: #f4f6f8;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(170,39%,80%,1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(200,40%,85%,1) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, hsla(150,40%,85%,1) 0px, transparent 50%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
 }
+
+
 
 /* OpenDyslexic Override Class */
 .font-dyslexic, .font-dyslexic * {
@@ -54,6 +69,7 @@ body.text-xlarge h3 { font-size: 1.50rem; }
 
 /* High Contrast Adjustments */
 body.high-contrast {
+  background-image: none;
   --background: #FFFFFF;
   --foreground: #000000;
   --card-bg: #FFFFFF;
@@ -122,4 +138,28 @@ body.high-contrast [class*="border-"] {
 .backdrop-blur-md {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-card {
+  background-color: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+body.high-contrast .glass-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  border-width: 1.5px;
+  border-color: #000;
+  background-color: #fff;
+}
+
+.glass-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  border-color: rgba(255,255,255,0.8);
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Key, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video } from 'lucide-react';
+import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Key, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video, Users, UserCheck, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
@@ -17,13 +18,14 @@ interface UIAuditLogEntry extends AuditLogEntry {
 
 export default function AdminConsole() {
   const { highContrast } = useAccessibility();
-  
+
   const [config, setConfig] = useState<AdminConfig | null>(null);
   const [secConfigRowId, setSecConfigRowId] = useState<string | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const router = useRouter();
 
   // Settings Form states
   const [startHours, setStartHours] = useState('09:00');
@@ -52,6 +54,8 @@ export default function AdminConsole() {
   // CV global toggle
   const [cvGlobalDisabled, setCvGlobalDisabled] = useState(false);
 
+
+
   const fetchAllData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -67,9 +71,11 @@ export default function AdminConsole() {
         .select('role')
         .eq('id', user.id)
         .single();
-      
-      if (!profile || (profile.role !== 'Admin' && profile.role !== 'IT')) {
-        throw new Error('Access Denied: You do not have the required Administrator permissions.');
+
+      const role = (profile?.role || '').toLowerCase();
+      if (!profile || role !== 'admin') {
+        router.replace('/');
+        return;
       }
 
       setCurrentUser(user);
@@ -118,7 +124,7 @@ export default function AdminConsole() {
       if (profilesData && profilesData.length > 0) {
         const total = profilesData.length;
         const cvCount = profilesData.filter(p => p.camera_telemetry_consented).length;
-        
+
         setOptIn({
           webcamCV: Math.round((cvCount / total) * 100),
           messagingSync: 0,
@@ -144,12 +150,12 @@ export default function AdminConsole() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (logsData) {
       // Fetch corresponding user names
       const actorIds = [...new Set(logsData.map(l => l.actor_id))];
       const { data: actorsData } = await supabase.from('user_profiles').select('id, full_name').in('id', actorIds);
-      
+
       const actorMap: Record<string, string> = {};
       if (actorsData) {
         actorsData.forEach(a => { actorMap[a.id] = a.full_name; });
@@ -195,9 +201,9 @@ export default function AdminConsole() {
         .eq('id', config.id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       if (updated) {
         setConfig(updated);
         await logAuditAction('Updated Org-Wide System Preferences', 'admin_configs');
@@ -222,7 +228,7 @@ export default function AdminConsole() {
         .eq('id', config.id)
         .select()
         .single();
-      
+
       if (error) throw error;
 
       if (updated) {
@@ -248,7 +254,7 @@ export default function AdminConsole() {
           kms_key_url: kmsKeyUrl
         })
         .eq('id', secConfigRowId);
-      
+
       if (error) throw error;
 
       await logAuditAction(`Security config updated: SSO=${ssoProvider}, SCIM=${scimEnabled ? 'on' : 'off'}, Residency=${dataResidency}`, 'security_configs');
@@ -264,15 +270,15 @@ export default function AdminConsole() {
     if (!config) return;
     const next = !cvGlobalDisabled;
     setCvGlobalDisabled(next); // Optimistic UI update
-    
+
     try {
       const { error } = await supabase
         .from('admin_configs')
         .update({ webcam_cv_global_disabled: next })
         .eq('id', config.id);
-      
+
       if (error) throw error;
-      
+
       await logAuditAction(`Webcam CV ${next ? 'disabled' : 'enabled'} org-wide.`, 'admin_configs.webcam_cv_global_disabled');
       window.dispatchEvent(new Event('pulse-cv-global-change'));
     } catch (err) {
@@ -335,36 +341,36 @@ export default function AdminConsole() {
   if (!config) {
     return (
       <div className="p-8 text-center text-xs text-neutral-400">
-        Loading HR/IT Admin preferences...
+        Loading Admin preferences...
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Intro Header */}
-      <div className={`p-6 bg-white rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+      <div className={`p-6 glass-card rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
         }`}>
         <div className="space-y-1.5">
-          <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
+          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
             <Sliders className="h-5.5 w-5.5 text-teal-600" />
-            <span>HR/IT Admin Console</span>
+            <span>Admin Console</span>
           </h2>
           <p className="text-xs text-neutral-500 leading-relaxed max-w-2xl">
             Configure org-wide working hour boundaries, privacy floors for team data aggregation, local EAP referral destinations, and manage emergency system overrides.
           </p>
         </div>
 
-        <span className="px-3 py-1 bg-neutral-900 text-white rounded-full text-[10px] font-bold shrink-0">
-          ROLE: HR ADMINISTRATOR
+        <span className="px-3 py-1 bg-teal-600 text-white rounded-full text-[10px] font-bold shrink-0">
+          ROLE: ADMINISTRATOR
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-min mb-6">
         {/* Settings Data Grid Form (2 cols) */}
         <form
           onSubmit={handleSaveSettings}
-          className={`p-6 bg-white rounded-2xl border lg:col-span-2 space-y-5 flex flex-col justify-between ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+          className={`p-6 glass-card rounded-2xl border md:col-span-2 xl:col-span-2 space-y-5 flex flex-col justify-between transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
             }`}
         >
           <div className="space-y-4">
@@ -384,7 +390,7 @@ export default function AdminConsole() {
                   required
                   value={startHours}
                   onChange={(e) => setStartHours(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 />
               </div>
@@ -400,7 +406,7 @@ export default function AdminConsole() {
                   required
                   value={endHours}
                   onChange={(e) => setEndHours(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 />
               </div>
@@ -414,7 +420,7 @@ export default function AdminConsole() {
                   id="calendar-select"
                   value={calendar}
                   onChange={(e) => setCalendar(e.target.value)}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 >
                   <option value="US Federal">US Federal Calendar</option>
@@ -434,7 +440,7 @@ export default function AdminConsole() {
                   id="floor-select"
                   value={floor}
                   onChange={(e) => setFloor(Number(e.target.value))}
-                  className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                  className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                     }`}
                 >
                   <option value="5">Minimum 5 team members required (Standard)</option>
@@ -457,7 +463,7 @@ export default function AdminConsole() {
                 placeholder="e.g. https://company.intranet/eap-wellbeing"
                 value={eap}
                 onChange={(e) => setEap(e.target.value)}
-                className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'
+                className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'
                   }`}
               />
             </div>
@@ -479,8 +485,8 @@ export default function AdminConsole() {
               type="submit"
               disabled={isSaving}
               className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
-                  ? 'bg-black text-white hover:bg-neutral-800'
-                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                ? 'bg-black text-white hover:bg-neutral-800'
+                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
                 }`}
             >
               <Save className="h-4 w-4" />
@@ -490,7 +496,7 @@ export default function AdminConsole() {
         </form>
 
         {/* System Paused Red Kill Switch (1 col) */}
-        <div className={`p-6 bg-white rounded-2xl border flex flex-col justify-between items-center text-center ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'
+        <div className={`p-6 glass-card rounded-2xl border flex flex-col justify-between items-center text-center transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'
           }`}>
           <div className="space-y-4 w-full">
             <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -499,8 +505,8 @@ export default function AdminConsole() {
 
             {/* Red Octagon Shield */}
             <div className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto border-2 ${config.emergency_kill_switch
-                ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
-                : 'bg-neutral-50 text-neutral-400 border-neutral-200'
+              ? 'bg-red-50 text-red-600 border-red-200 animate-pulse'
+              : 'bg-neutral-50 text-neutral-400 border-border-color'
               }`}>
               <AlertOctagon className="h-10 w-10 stroke-[2.2]" />
             </div>
@@ -522,8 +528,8 @@ export default function AdminConsole() {
           <button
             onClick={handleToggleSystemPaused}
             className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 mt-6 ${config.emergency_kill_switch
-                ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
-                : 'bg-red-600 hover:bg-red-750 text-white border-transparent shadow-md'
+              ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
+              : 'bg-red-600 hover:bg-red-700 text-white border-transparent shadow-md'
               }`}
           >
             <ShieldAlert className="h-4.5 w-4.5" />
@@ -533,7 +539,7 @@ export default function AdminConsole() {
       </div>
 
       {/* ===== Webcam CV Global Kill Switch ===== */}
-      <div className={`p-6 bg-white rounded-2xl border ${highContrast ? 'border-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border transition-colors duration-300 ${highContrast ? 'border-black' : 'border-border-color'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-full flex items-center justify-center border-2 ${cvGlobalDisabled ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
@@ -551,7 +557,7 @@ export default function AdminConsole() {
             aria-checked={!cvGlobalDisabled}
             aria-label="Toggle org-wide webcam CV"
           >
-            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${cvGlobalDisabled ? 'translate-x-1' : 'translate-x-6'}`} />
+            <span className={`inline-block h-4 w-4 rounded-full glass-card shadow-sm transition-transform ${cvGlobalDisabled ? 'translate-x-1' : 'translate-x-6'}`} />
           </button>
         </div>
       </div>
@@ -559,10 +565,10 @@ export default function AdminConsole() {
 
 
       {/* ===== Security Configuration ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border space-y-5 transition-colors duration-300 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
           <ShieldAlert className="h-5 w-5 text-teal-600" />
-          <h3 className="text-base font-bold text-neutral-800">Security &amp; Compliance Configuration</h3>
+          <h3 className="text-base font-bold text-foreground">Security &amp; Compliance Configuration</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -573,7 +579,7 @@ export default function AdminConsole() {
               id="sso-provider-select"
               value={ssoProvider}
               onChange={(e) => setSsoProvider(e.target.value as 'none' | 'okta' | 'entra_id')}
-              className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'}`}
             >
               <option value="none">None (Password Auth)</option>
               <option value="okta">Okta</option>
@@ -588,7 +594,7 @@ export default function AdminConsole() {
               id="data-residency-select"
               value={dataResidency}
               onChange={(e) => setDataResidency(e.target.value as 'US' | 'EU' | 'APAC')}
-              className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'}`}
             >
               <option value="US">United States</option>
               <option value="EU">European Union</option>
@@ -605,7 +611,7 @@ export default function AdminConsole() {
               placeholder="e.g. https://kms.company.com/keys/pulse-prod"
               value={kmsKeyUrl}
               onChange={(e) => setKmsKeyUrl(e.target.value)}
-              className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+              className={`w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ? 'border-black' : 'border-border-color'}`}
             />
           </div>
         </div>
@@ -623,7 +629,7 @@ export default function AdminConsole() {
             aria-checked={scimEnabled}
             aria-label="Toggle SCIM sync"
           >
-            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${scimEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span className={`inline-block h-4 w-4 rounded-full glass-card shadow-sm transition-transform ${scimEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
 
@@ -638,9 +644,8 @@ export default function AdminConsole() {
           )}
           <button
             onClick={handleSaveSecurityConfig}
-            className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-            }`}
+            className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+              }`}
           >
             <Save className="h-4 w-4" />
             <span>Save Security Config</span>
@@ -648,8 +653,10 @@ export default function AdminConsole() {
         </div>
       </div>
 
+
+
       {/* ===== Module Opt-in Analytics ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
           <BarChart3 className="h-5 w-5 text-teal-600" />
           <h3 className="text-base font-bold text-neutral-800">Module Opt-in Analytics</h3>
@@ -676,7 +683,7 @@ export default function AdminConsole() {
       </div>
 
       {/* ===== Compliance Audit Log ===== */}
-      <div className={`p-6 bg-white rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-[#f1f0ea]'}`}>
+      <div className={`p-6 glass-card rounded-2xl border space-y-5 ${highContrast ? 'border-black text-black' : 'border-border-color'}`}>
         <div className="flex items-center justify-between border-b pb-3 border-neutral-100">
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-teal-600" />
