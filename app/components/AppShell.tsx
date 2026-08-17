@@ -195,14 +195,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <form onSubmit={handleFormSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-neutral-700">Work Email</label>
-                  <input type="email" placeholder="e.g. alex.rivera@axionhr.com" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full p-3.5 rounded-xl border text-sm glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" required />
+                  <label htmlFor="email" className="block text-xs font-bold text-neutral-700">Work Email</label>
+                  <input id="email" name="email" autoComplete="email" type="email" placeholder="e.g. alex.rivera@axionhr.com" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full p-3.5 rounded-xl border text-sm glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" required />
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-neutral-700">Password</label>
+                    <label htmlFor="password" className="block text-xs font-bold text-neutral-700">Password</label>
                   </div>
-                  <input type="password" placeholder="••••••••" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full p-3.5 rounded-xl border text-sm glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" required />
+                  <input id="password" name="password" autoComplete="current-password" type="password" placeholder="••••••••" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full p-3.5 rounded-xl border text-sm glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" required />
                 </div>
               </div>
               {loginError && (<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 font-semibold flex items-start gap-2"><span className="shrink-0 mt-0.5">⚠️</span><span>{loginError}</span></div>)}
