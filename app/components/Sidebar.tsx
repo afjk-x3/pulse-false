@@ -23,6 +23,14 @@ import { useAccessibility } from '../context/AccessibilityContext';
 
 export type TabType = 'dashboard' | 'inbox' | 'kudos' | 'support' | 'privacy' | 'coffee' | 'manager' | 'admin' | 'settings' | 'users';
 
+const AnimatedHamburger = ({ active }: { active: boolean }) => (
+    <div className={`relative w-6 h-[14px] flex flex-col justify-between items-end transition-transform duration-300 ease-in-out ${active ? '-rotate-180' : ''}`}>
+        <span className={`h-[2px] bg-current rounded-full transition-all duration-300 ease-out origin-right ${active ? 'w-3.5 -rotate-45 translate-y-1.5' : 'w-6'}`}></span>
+        <span className={`h-[2px] bg-current rounded-full transition-all duration-300 ease-out ${active ? 'w-6' : 'w-6'}`}></span>
+        <span className={`h-[2px] bg-current rounded-full transition-all duration-300 ease-out origin-right ${active ? 'w-3.5 rotate-45 -translate-y-1.5' : 'w-6'}`}></span>
+    </div>
+);
+
 interface SidebarProps {
     activeTab: TabType;
     setActiveTab: (tab: TabType) => void;
@@ -54,21 +62,17 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
 
     return (
         <>
-            {/* Mobile Sidebar Hamburger Trigger (Floating when sidebar is closed) */}
-            {!isOpen && (
-                <div className="lg:hidden fixed top-4 left-4 z-[60]">
-                    <button
-                        onClick={() => setIsOpen(true)}
-                        className={`p-2.5 rounded-lg text-neutral-800 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-teal-600 transition-colors ${highContrast ? 'border border-black text-black' : 'border border-transparent'
-                            }`}
-                        aria-expanded={isOpen}
-                        aria-label="Open sidebar menu"
-                        aria-controls="sidebar-navigation"
-                    >
-                        <Menu className="h-6 w-6" />
-                    </button>
-                </div>
-            )}
+            {/* Mobile Sidebar Hamburger Trigger (Always rendered for animation) */}
+            <div className="lg:hidden fixed top-4 left-4 z-[65]">
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg text-neutral-800 transition-colors focus:outline-none [-webkit-tap-highlight-color:transparent] ${highContrast ? 'border border-black text-black' : 'border border-transparent'}`}
+                    aria-expanded={isOpen}
+                    aria-label="Toggle sidebar menu"
+                >
+                    <AnimatedHamburger active={isOpen} />
+                </button>
+            </div>
 
             {/* Mobile Backdrop Overlay */}
             {isOpen && (
@@ -100,29 +104,23 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                                 setIsCollapsed(!isCollapsed);
                             }
                         }}
-                        className="flex items-center w-full justify-center lg:justify-start hover:opacity-80 transition-opacity focus:outline-none rounded"
+                        className="flex items-center w-full justify-center lg:justify-start focus:outline-none rounded [-webkit-tap-highlight-color:transparent]"
                         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                     >
-                        {!isCollapsed ? (
-                            <div className="flex items-center space-x-2 w-full">
-                                <div className="w-10 h-10 flex items-center justify-center text-neutral-700 shrink-0">
-                                    <Menu className="w-6 h-6" strokeWidth={2.5} />
-                                </div>
-                                <div className="relative w-40 h-10 flex items-center select-none shrink-0">
-                                    <Image
-                                        src="/logo.svg"
-                                        alt="Pulse: AxionHR logo"
-                                        fill
-                                        className="object-contain object-left"
-                                        priority
-                                    />
-                                </div>
+                        <div className="flex items-center w-full">
+                            <div className="w-10 h-10 flex items-center justify-center text-neutral-700 shrink-0">
+                                <div className="hidden lg:block"><AnimatedHamburger active={!isCollapsed} /></div>
                             </div>
-                        ) : (
-                            <div className="w-10 h-10 flex items-center justify-center text-neutral-700">
-                                <Menu className="w-6 h-6" strokeWidth={2.5} />
+                            <div className={`relative h-10 flex items-center select-none shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'w-0 opacity-0 ml-0' : 'w-40 opacity-100 ml-2'}`}>
+                                <Image
+                                    src="/logo.svg"
+                                    alt="Pulse: AxionHR logo"
+                                    fill
+                                    className="object-contain object-left"
+                                    priority
+                                />
                             </div>
-                        )}
+                        </div>
                     </button>
                 </div>
 

@@ -332,29 +332,39 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  )}
  </button>
 
- {/* Dropdown Menu */}
- {isNotifMenuOpen && (
- <>
- {/* Overlay blocker for outside clicks */}
- <div className="fixed inset-0 z-40" onClick={() => setIsNotifMenuOpen(false)} />
+  {/* Dropdown Menu */}
+  {isNotifMenuOpen && (
+  <>
+  {/* Mobile Backdrop */}
+  <div className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm sm:hidden animate-fade-in" onClick={(e) => { e.stopPropagation(); setIsNotifMenuOpen(false); }} />
+  
+  {/* Desktop Overlay blocker for outside clicks */}
+  <div className="hidden sm:block fixed inset-0 z-40" onClick={() => setIsNotifMenuOpen(false)} />
 
- <div className={`absolute right-0 mt-3 w-80 p-5 rounded-xl border bg-white shadow-xl z-50 transition-all ${highContrast ?'border-black text-black' :'border-border-color'
-}`}>
- <div className="flex items-center justify-between border-b pb-3 mb-4">
- <div className="flex items-center gap-2">
- <Bell className="h-5 w-5 text-teal-600" />
- <span className="font-bold text-neutral-800">Notifications</span>
- </div>
- <button
- onClick={() => setIsNotifMenuOpen(false)}
- className="p-1 rounded hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500"
- aria-label="Close notifications panel"
- >
- <X className="h-4 w-4" />
- </button>
- </div>
- 
- <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+  <div 
+    className={`
+      fixed inset-x-4 top-1/2 -translate-y-1/2 z-[101] p-5 rounded-2xl shadow-2xl flex flex-col max-h-[85vh] bg-white border
+      sm:absolute sm:inset-auto sm:top-auto sm:right-0 sm:mt-3 sm:w-80 sm:p-5 sm:rounded-xl sm:shadow-xl sm:z-50 sm:max-h-[60vh] sm:translate-y-0
+      transition-all animate-fade-in
+      ${highContrast ?'border-black text-black' :'border-border-color'}
+    `}
+    onClick={(e) => e.stopPropagation()}
+  >
+  <div className="flex items-center justify-between border-b pb-3 mb-4 shrink-0">
+  <div className="flex items-center gap-2">
+  <Bell className="h-5 w-5 text-teal-600" />
+  <span className="font-bold text-neutral-800">Notifications</span>
+  </div>
+  <button
+  onClick={() => setIsNotifMenuOpen(false)}
+  className="p-1 rounded hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500"
+  aria-label="Close notifications panel"
+  >
+  <X className="h-4 w-4" />
+  </button>
+  </div>
+  
+  <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar">
  {notifications.length === 0 ? (
  <div className="text-center text-sm text-neutral-500 py-4">No notifications</div>
  ) : (

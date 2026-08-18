@@ -17,6 +17,17 @@ export default function WebcamCVConsentModal({ isOpen, onAccept, onDecline}: Web
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !mounted) return null;
 
   return createPortal(
@@ -26,8 +37,11 @@ export default function WebcamCVConsentModal({ isOpen, onAccept, onDecline}: Web
   aria-modal="true"
   aria-labelledby="consent-modal-title"
   aria-describedby="consent-modal-desc"
+  onClick={onDecline}
   >
-  <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+  <div 
+  onClick={(e) => e.stopPropagation()}
+  className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
   highContrast ?'border-black text-black' :'border-neutral-100'
  }`}>
  {/* Header */}
