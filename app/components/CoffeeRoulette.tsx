@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect} from'react';
-import { Coffee, Calendar, RefreshCw, AlertCircle, CheckCircle2, Sliders} from'lucide-react';
+import { Coffee, Calendar, RefreshCw, AlertCircle, CheckCircle2, Sliders, Send, MessageCircle } from 'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { useAccessibility} from'../context/AccessibilityContext';
 
@@ -22,6 +22,37 @@ export default function CoffeeRoulette() {
  const [scheduleSuccess, setScheduleSuccess] = useState(false);
  const [loading, setLoading] = useState(false);
  const [initialLoading, setInitialLoading] = useState(true);
+
+ // Chat flow state
+ const [messages, setMessages] = useState<{sender: 'me' | 'them', text: string}[]>([]);
+ const [chatInput, setChatInput] = useState('');
+ const [isTyping, setIsTyping] = useState(false);
+ const [chatStage, setChatStage] = useState<'empty' | 'chatting' | 'ready_to_call'>('empty');
+
+ const handleSendMessage = (text: string) => {
+   if (!text.trim()) return;
+   setMessages(prev => [...prev, { sender: 'me', text }]);
+   setChatInput('');
+   setChatStage('chatting');
+   setIsTyping(true);
+
+   // Simulate partner response
+   setTimeout(() => {
+     setIsTyping(false);
+     const mockReplies = [
+       "That's a great question! I usually try to keep them under 30 mins.",
+       "I actually haven't tried that yet, but it sounds interesting.",
+       "For sure, I've noticed the same thing lately."
+     ];
+     const reply = mockReplies[Math.floor(Math.random() * mockReplies.length)];
+     setMessages(prev => [...prev, { sender: 'them', text: reply }]);
+     
+     // Trigger the schedule CTA after they reply
+     setTimeout(() => {
+       setChatStage('ready_to_call');
+     }, 1000);
+   }, 2000);
+ };
 
  useEffect(() => {
  // Load local pause state
@@ -166,7 +197,16 @@ export default function CoffeeRoulette() {
 }`}>
  <Coffee className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
  <p className="text-xs font-semibold text-neutral-700">No active pairing found</p>
- <p className="text-[11px] text-neutral-400 mt-1">Wait until the next matching cycle on Monday to receive a partner!</p>
+ <p className="text-[11px] text-neutral-400 mt-1 mb-5">Wait until the next matching cycle on Monday to receive a partner!</p>
+
+ <button
+ onClick={handleRerollPairing}
+ disabled={loading}
+ className="mx-auto py-2 px-6 rounded-xl text-xs font-semibold bg-white hover:bg-neutral-50 text-neutral-600 flex items-center justify-center gap-1.5 border border-neutral-200 transition focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
+ >
+ <RefreshCw className={`h-4 w-4 ${loading ?'animate-spin' :''}`} />
+ <span>{loading ? 'Generating...' : 'Simulate Match'}</span>
+ </button>
  </div>
  ) : (
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -202,19 +242,6 @@ export default function CoffeeRoulette() {
  {/* Actions */}
  <div className="w-full space-y-2 mt-6">
  <button
- onClick={handleScheduleChat}
- disabled={loading}
- className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition focus:outline-none focus:ring-2 focus:ring-teal-500 ${
- highContrast
- ?'bg-black text-white hover:bg-neutral-800'
- :'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-}`}
- >
- <Calendar className="h-4.5 w-4.5" />
- <span>{loading ?'Scheduling...' :'Schedule Chat'}</span>
- </button>
-
- <button
  onClick={handleRerollPairing}
  disabled={loading}
  className="w-full py-2 rounded-xl text-xs font-semibold hover:bg-neutral-50 text-neutral-500 flex items-center justify-center gap-1.5 border border-border-color transition focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -225,50 +252,117 @@ export default function CoffeeRoulette() {
  </div>
  </div>
 
- {/* Conversation starters */}
- <div className={`p-6 glass-card rounded-2xl border md:col-span-2 flex flex-col justify-between ${
+ {/* Mini-Chat Interface */}
+ <div className={`p-6 glass-card rounded-2xl border md:col-span-2 flex flex-col ${
  highContrast ?'border-black text-black' :'border-border-color'
-}`}>
- <div className="space-y-4">
- <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
- Conversation Starters (Low Pressure prompts)
+ }`}>
+ <div className="flex items-center gap-2 mb-4">
+ <MessageCircle className="h-4.5 w-4.5 text-teal-600" />
+ <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+ Say Hello
  </span>
-
- <p className="text-xs text-neutral-500 leading-relaxed">
- Break the ice easily. These topics avoid generic project status updates and focus on building connection:
- </p>
-
- <div className="space-y-3 pt-2" role="region" aria-label="Conversation starters list">
- {CONVERSATION_STARTERS.map((starter, idx) => (
- <div 
- key={idx}
- className={`p-3.5 rounded-xl border bg-neutral-50/40 text-xs font-semibold leading-relaxed text-neutral-700 hover:bg-neutral-50 transition ${
- highContrast ?'border-black' :'border-neutral-100'
-}`}
- >
- <span className="text-teal-600 mr-1.5 font-extrabold">0{idx + 1}.</span>
- {starter}
  </div>
+
+ <div className={`flex-1 overflow-y-auto mb-4 space-y-3 min-h-[200px] p-4 rounded-xl border ${highContrast ? 'bg-white border-black' : 'bg-neutral-50/50 border-neutral-100'}`}>
+ {messages.length === 0 ? (
+ <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+ <p className="text-xs text-neutral-500">
+ Break the ice! Send a message or pick an icebreaker below.
+ </p>
+ <div className="flex flex-wrap justify-center gap-2">
+ {CONVERSATION_STARTERS.map((starter, idx) => (
+ <button 
+ key={idx}
+ onClick={() => handleSendMessage(starter)}
+ className={`px-3 py-1.5 rounded-full text-[10px] font-semibold transition ${highContrast ? 'border border-black hover:bg-black hover:text-white' : 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 shadow-sm'}`}
+ >
+ {starter}
+ </button>
  ))}
  </div>
  </div>
-
- {/* Notification alert success */}
- {scheduleSuccess && (
- <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-800 flex items-start gap-2.5 animate-scale-up">
- <CheckCircle2 className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
- <div>
- <span className="font-bold block">Calendar Invites Sent!</span>
- <span className="text-[10px] text-teal-700/80">
- A mutual 15-minute slot has been booked in your calendar for next Tuesday at 10:00 AM.
- </span>
+ ) : (
+ <>
+ {messages.map((msg, idx) => (
+ <div key={idx} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+ <div className={`px-3 py-2 rounded-2xl max-w-[80%] text-xs ${msg.sender === 'me' ? 'bg-teal-600 text-white rounded-tr-sm' : (highContrast ? 'bg-neutral-200 text-black rounded-tl-sm' : 'bg-white border border-neutral-200 text-neutral-700 shadow-sm rounded-tl-sm')}`}>
+ {msg.text}
+ </div>
+ </div>
+ ))}
+ {isTyping && (
+ <div className="flex justify-start">
+ <div className={`px-3 py-2 rounded-2xl text-xs flex items-center gap-1 ${highContrast ? 'bg-neutral-200' : 'bg-white border border-neutral-200 shadow-sm'} rounded-tl-sm`}>
+ <span className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"></span>
+ <span className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+ <span className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
  </div>
  </div>
  )}
 
- <div className="text-[10px] text-neutral-400 flex items-center gap-1.5 leading-tight pt-4 md:pt-0">
- <Sliders className="h-4 w-4 text-teal-600" />
- <span>Roulette matching is updated bi-weekly. Unchecking active pairing disables notifications immediately.</span>
+ {chatStage === 'ready_to_call' && (
+ <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4 pb-2 animate-fade-in">
+ <button
+ onClick={handleScheduleChat}
+ disabled={loading}
+ className={`py-2 px-5 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition focus:outline-none shadow-md ${
+ highContrast
+ ?'bg-white text-black border-2 border-black hover:bg-neutral-100'
+ :'bg-white border border-teal-600 text-teal-700 hover:bg-teal-50'
+ }`}
+ >
+ <Calendar className="h-4 w-4" />
+ <span>{loading ?'Scheduling...' :'Propose Video Call'}</span>
+ </button>
+
+ <button
+ onClick={handleScheduleChat}
+ disabled={loading}
+ className={`py-2 px-5 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition focus:outline-none shadow-md ${
+ highContrast
+ ?'bg-black text-white hover:bg-neutral-800'
+ :'bg-teal-600 hover:bg-teal-700 text-white'
+ }`}
+ >
+ <Coffee className="h-4 w-4" />
+ <span>{loading ?'Scheduling...' :'Schedule Meetup'}</span>
+ </button>
+ </div>
+ )}
+
+ {scheduleSuccess && (
+ <div className="flex justify-center animate-scale-up">
+ <div className="mt-2 p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-800 flex items-start gap-2.5">
+ <CheckCircle2 className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
+ <div>
+ <span className="font-bold block">Invites Sent!</span>
+ <span className="text-[10px] text-teal-700/80">
+ A mutual calendar invite has been sent to both of you for next Tuesday.
+ </span>
+ </div>
+ </div>
+ </div>
+ )}
+ </>
+ )}
+ </div>
+
+ {/* Input Area */}
+ <div className="flex gap-2">
+ <input 
+ type="text" 
+ value={chatInput}
+ onChange={(e) => setChatInput(e.target.value)}
+ onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(chatInput)}
+ placeholder="Type a message..."
+ className={`flex-1 text-xs px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+ />
+ <button 
+ onClick={() => handleSendMessage(chatInput)}
+ className={`p-2 rounded-xl transition ${highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'}`}
+ >
+ <Send className="h-4 w-4" />
+ </button>
  </div>
  </div>
  </div>
