@@ -23,6 +23,8 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  const [address, setAddress] = useState(currentUser.address ||'');
  const [avatar, setAvatar] = useState(currentUser.avatar ||'');
  const [newPassword, setNewPassword] = useState('');
+ const [workingHoursStart, setWorkingHoursStart] = useState(currentUser.working_hours_start || '09:00');
+ const [workingHoursEnd, setWorkingHoursEnd] = useState(currentUser.working_hours_end || '17:00');
 
  const [isLoading, setIsLoading] = useState(false);
  const [errorMsg, setErrorMsg] = useState('');
@@ -61,6 +63,8 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  phone: phone.trim(),
  address: address.trim() || null,
  avatar: avatar || null,
+ working_hours_start: workingHoursStart,
+ working_hours_end: workingHoursEnd,
 })
  .eq('id', currentUser.id);
 
@@ -142,6 +146,54 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  placeholder="e.g. +1 (555) 019-2834"
  value={phone}
  onChange={(e) => setPhone(e.target.value)}
+ className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
+}`}
+ required
+ />
+ </div>
+
+ {/* Address */}
+ <div className="md:col-span-2">
+ <label htmlFor="settings-address" className="block text-xs font-bold text-neutral-700 mb-1">
+ Home Address
+ </label>
+ <input
+ id="settings-address"
+ type="text"
+ placeholder="e.g. 123 Guardian Way, Tech City"
+ value={address}
+ onChange={(e) => setAddress(e.target.value)}
+ className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
+}`}
+ />
+ </div>
+
+ {/* Working Hours Start */}
+ <div>
+ <label htmlFor="settings-wh-start" className="block text-xs font-bold text-neutral-700 mb-1">
+ My Working Hours (Start)
+ </label>
+ <input
+ id="settings-wh-start"
+ type="time"
+ value={workingHoursStart}
+ onChange={(e) => setWorkingHoursStart(e.target.value)}
+ className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
+}`}
+ required
+ />
+ </div>
+
+ {/* Working Hours End */}
+ <div>
+ <label htmlFor="settings-wh-end" className="block text-xs font-bold text-neutral-700 mb-1">
+ My Working Hours (End)
+ </label>
+ <input
+ id="settings-wh-end"
+ type="time"
+ value={workingHoursEnd}
+ onChange={(e) => setWorkingHoursEnd(e.target.value)}
  className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
 }`}
  required

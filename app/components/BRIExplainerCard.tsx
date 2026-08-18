@@ -70,7 +70,7 @@ export default function BRIExplainerCard() {
 
  return (
  <article 
- className={`p-6 glass-card rounded-2xl border focus-dimming-card shadow-xs relative flex flex-col justify-between h-full ${
+ className={`p-4 sm:p-6 glass-card rounded-2xl border focus-dimming-card shadow-xs relative flex flex-col justify-between h-full ${
  highContrast ?'border-black text-black' :'border-border-color'
 }`}
  aria-labelledby="explainer-title"

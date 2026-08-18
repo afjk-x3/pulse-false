@@ -1,5 +1,5 @@
-import type { Metadata} from"next";
-import { Geist, Geist_Mono} from"next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import"./globals.css";
 import { AccessibilityProvider} from"./context/AccessibilityContext";
 import ReadingRulerOverlay from"./components/ReadingRulerOverlay";
@@ -16,8 +16,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
- title:"Pulse: AxionHR Well-Being Guardian",
- description:"Enterprise-grade employee well-being dashboard and privacy-safe guardian.",
+  title: "Pulse: AxionHR Well-Being Guardian",
+  description: "Enterprise-grade employee well-being dashboard and privacy-safe guardian.",
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children}: LayoutProps<"/">) {
@@ -27,8 +34,8 @@ export default function RootLayout({ children}: LayoutProps<"/">) {
  className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
  suppressHydrationWarning
  >
- <body className="min-h-full flex flex-col">
- <AccessibilityProvider>
+  <body className="min-h-full flex flex-col overflow-x-hidden w-full">
+  <AccessibilityProvider>
  <AppShell>
  <ReadingRulerOverlay />
  {children}

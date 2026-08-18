@@ -122,7 +122,7 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger}: Bur
 
  return (
  <section
- className={`p-6 glass-card rounded-2xl border focus-dimming-card shadow-xs ${
+ className={`p-4 sm:p-6 glass-card rounded-2xl border focus-dimming-card shadow-xs ${
  highContrast ?'border-black text-black' :'border-border-color'
 }`}
  aria-labelledby="bri-title"
@@ -199,7 +199,7 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger}: Bur
  </div>
  </div>
  ) : (
- <div className="grid grid-cols-7 gap-3 mb-4" role="region" aria-label="7-Day heat calendar">
+ <div className="grid grid-cols-7 gap-1 sm:gap-3 mb-4" role="region" aria-label="7-Day heat calendar">
  {riskData.map((day) => {
  const isToday = day.date === DAY_LABELS[new Date().getDay()];
 
@@ -210,12 +210,12 @@ export default function BurnoutRiskIndex({ onNavigateToTab, refreshTrigger}: Bur
  onMouseEnter={() => setHoveredDay(day.date)}
  onMouseLeave={() => setHoveredDay(null)}
  >
- <span className={`text-[10px] font-bold mb-2 ${
+ <div className={`flex flex-col justify-end items-center h-8 mb-2 text-center text-[10px] font-bold leading-tight ${
  isToday ?'text-teal-600 font-extrabold underline decoration-2' :'text-neutral-400'
-}`}>
- {day.date}
- {isToday &&' (Today)'}
- </span>
+ }`}>
+ <span>{day.date}</span>
+ {isToday && <span className="block text-[8px] mt-0.5 no-underline">(Today)</span>}
+ </div>
 
  <div
  tabIndex={0}

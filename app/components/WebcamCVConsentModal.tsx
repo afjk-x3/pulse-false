@@ -1,7 +1,8 @@
 'use client';
 
-import React from'react';
-import { Camera, ShieldAlert, Check, AlertTriangle} from'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Camera, ShieldAlert, Check, AlertTriangle } from 'lucide-react';
 import { useAccessibility} from'../context/AccessibilityContext';
 
 interface WebcamCVConsentModalProps {
@@ -13,19 +14,22 @@ interface WebcamCVConsentModalProps {
 export default function WebcamCVConsentModal({ isOpen, onAccept, onDecline}: WebcamCVConsentModalProps) {
  const { highContrast} = useAccessibility();
 
- if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
- return (
- <div 
- className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/40 backdrop-blur-xs animate-fade-in"
- role="dialog"
- aria-modal="true"
- aria-labelledby="consent-modal-title"
- aria-describedby="consent-modal-desc"
- >
- <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
- highContrast ?'border-black text-black' :'border-neutral-100'
-}`}>
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+  <div 
+  className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="consent-modal-title"
+  aria-describedby="consent-modal-desc"
+  >
+  <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
+  highContrast ?'border-black text-black' :'border-neutral-100'
+ }`}>
  {/* Header */}
  <div className="flex items-start gap-3 border-b pb-3.5 border-neutral-100">
  <div className="h-10 w-10 rounded-full bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center shrink-0">
@@ -87,6 +91,7 @@ export default function WebcamCVConsentModal({ isOpen, onAccept, onDecline}: Web
  </button>
  </div>
  </div>
- </div>
+ </div>,
+ document.body
  );
 }

@@ -130,7 +130,7 @@ export default function SentimentTrendLine({ refreshTrigger}: SentimentTrendLine
 
  return (
  <article
- className={`p-6 glass-card rounded-2xl border focus-dimming-card shadow-xs ${
+ className={`p-4 sm:p-6 glass-card rounded-2xl border focus-dimming-card shadow-xs ${
  highContrast ?'border-black text-black' :'border-border-color'
 }`}
  aria-labelledby="sentiment-trend-title"

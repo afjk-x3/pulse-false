@@ -90,7 +90,7 @@ export default function BRIExplanationFeed({ refreshTrigger}: BRIExplanationFeed
  return (
  <>
  <section
- className={`p-6 glass-card rounded-2xl border shadow-xs ${
+ className={`p-4 sm:p-6 glass-card rounded-2xl border shadow-xs ${
  highContrast ?'border-black text-black' :'border-border-color'
 }`}
  aria-labelledby="bri-feed-title"

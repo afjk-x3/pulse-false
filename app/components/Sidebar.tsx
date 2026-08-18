@@ -16,11 +16,12 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
-    UserCog
+    UserCog,
+    MessageCircle
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 
-export type TabType = 'dashboard' | 'kudos' | 'support' | 'privacy' | 'coffee' | 'manager' | 'admin' | 'settings' | 'users';
+export type TabType = 'dashboard' | 'inbox' | 'kudos' | 'support' | 'privacy' | 'coffee' | 'manager' | 'admin' | 'settings' | 'users';
 
 interface SidebarProps {
     activeTab: TabType;
@@ -40,6 +41,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
         { id: 'manager' as TabType, label: 'Manager View', icon: Users, desc: 'Team aggregate metrics', roles: ['manager'] },
         { id: 'admin' as TabType, label: 'Admin Control', icon: Sliders, desc: 'System configuration', roles: ['admin', 'it'] },
         { id: 'dashboard' as TabType, label: 'Personal Dashboard', icon: LayoutDashboard, desc: 'View well-being indicators', roles: ['employee', 'manager'] },
+        { id: 'inbox' as TabType, label: 'Direct Messages', icon: MessageCircle, desc: 'Secure internal chat & outbox', roles: ['employee', 'manager', 'admin', 'it'] },
         { id: 'users' as TabType, label: 'User Management', icon: UserCog, desc: 'Manage accounts & roles', roles: ['admin', 'it'] },
         { id: 'kudos' as TabType, label: 'Kudos Feed', icon: Award, desc: 'Peer recognition wall', roles: ['employee', 'manager'] },
         { id: 'support' as TabType, label: 'Support Circles', icon: Users, desc: 'Connect with support groups', roles: ['employee', 'manager'] },
@@ -53,23 +55,25 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
     return (
         <>
             {/* Mobile Sidebar Hamburger Trigger (Floating when sidebar is closed) */}
-            <div className="lg:hidden fixed top-4 left-4 z-40">
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className={`p-2.5 rounded-lg glass-card border border-border-color text-neutral-800 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-teal-600 transition-colors shadow-sm ${highContrast ? 'border-black text-black' : ''
-                        }`}
-                    aria-expanded={isOpen}
-                    aria-label={isOpen ? "Close sidebar menu" : "Open sidebar menu"}
-                    aria-controls="sidebar-navigation"
-                >
-                    {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
-            </div>
+            {!isOpen && (
+                <div className="lg:hidden fixed top-4 left-4 z-[60]">
+                    <button
+                        onClick={() => setIsOpen(true)}
+                        className={`p-2.5 rounded-lg text-neutral-800 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-teal-600 transition-colors ${highContrast ? 'border border-black text-black' : 'border border-transparent'
+                            }`}
+                        aria-expanded={isOpen}
+                        aria-label="Open sidebar menu"
+                        aria-controls="sidebar-navigation"
+                    >
+                        <Menu className="h-6 w-6" />
+                    </button>
+                </div>
+            )}
 
             {/* Mobile Backdrop Overlay */}
             {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 z-30 bg-neutral-900/20 backdrop-blur-xs transition-opacity"
+                    className="lg:hidden fixed inset-0 z-[55] bg-neutral-900/20 backdrop-blur-xs transition-opacity"
                     onClick={() => setIsOpen(false)}
                     aria-hidden="true"
                 />
@@ -78,18 +82,24 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
             {/* Main Sidebar Drawer */}
             <aside
                 id="sidebar-navigation"
-                className={`fixed top-0 bottom-0 left-0 z-30 flex flex-col border-r transition-all duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed top-0 bottom-0 left-0 z-[60] flex flex-col border-r transition-all duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
                     } ${isCollapsed ? 'w-20' : 'w-72'
                     } ${highContrast
-                        ? 'border-black glass-card text-black'
-                        : 'border-border-color glass-card'
+                        ? 'border-black bg-white text-black'
+                        : 'border-border-color bg-white'
                     }`}
             >
                 {/* Sidebar Logo Container */}
                 <div className={`p-4 border-b flex items-center justify-between ${highContrast ? 'border-black' : 'border-border-color'
                     }`}>
                     <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        onClick={() => {
+                            if (window.innerWidth < 1024) {
+                                setIsOpen(false);
+                            } else {
+                                setIsCollapsed(!isCollapsed);
+                            }
+                        }}
                         className="flex items-center w-full justify-center lg:justify-start hover:opacity-80 transition-opacity focus:outline-none rounded"
                         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                     >
@@ -113,15 +123,6 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                                 <Menu className="w-6 h-6" strokeWidth={2.5} />
                             </div>
                         )}
-                    </button>
-
-                    {/* Close button inside sidebar for mobile */}
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="lg:hidden p-1.5 rounded-md hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500"
-                        aria-label="Close menu"
-                    >
-                        <X className="h-5 w-5" />
                     </button>
                 </div>
 
@@ -177,21 +178,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, cu
                 {/* Sidebar Footer Section */}
                 <div className={`p-4 border-t text-[11px] text-neutral-400 font-medium space-y-3.5 ${highContrast ? 'border-black text-black' : 'border-border-color'
                     }`}>
-                    {/* Sign Out Button */}
-                    <button
-                        onClick={onLogout}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-500 ${isCollapsed ? 'px-0' : 'px-4 gap-2'
-                            } ${highContrast
-                                ? 'border-black hover:bg-black hover:text-white text-black glass-card'
-                                : 'border-border-color hover:bg-neutral-50 text-neutral-600'
-                            }`}
-                        title="Sign Out"
-                    >
-                        <LogOut className="h-4 w-4 text-neutral-500 animate-pulse-slow" />
-                        {!isCollapsed && <span>Sign Out Account</span>}
-                    </button>
-
-                    {!isCollapsed && (
+                    {/* Footer Info */}                    {!isCollapsed && (
                         <>
                             <div className="flex items-center justify-between">
                                 <span>AxionHR WBG v1.0.0</span>

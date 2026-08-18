@@ -124,7 +124,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Derive activeTab and PageTitle from pathname
   let activeTab: TabType = 'dashboard';
   let pageTitle = 'Guardian Dashboard';
-  if (pathname.includes('/kudos')) { activeTab = 'kudos'; pageTitle = 'Kudos Peer Feed'; }
+  if (pathname.includes('/inbox')) { activeTab = 'inbox'; pageTitle = 'Direct Messages'; }
+  else if (pathname.includes('/kudos')) { activeTab = 'kudos'; pageTitle = 'Kudos Peer Feed'; }
   else if (pathname.includes('/support')) { activeTab = 'support'; pageTitle = 'Support Circles Forum'; }
   else if (pathname.includes('/privacy')) { activeTab = 'privacy'; pageTitle = 'Privacy & Data Governance'; }
   else if (pathname.includes('/coffee')) { activeTab = 'coffee'; pageTitle = 'Coffee Roulette Connector'; }
@@ -138,10 +139,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const role = (currentUser.role || currentUser.roleName || 'employee').toLowerCase();
 
       const roleConfig = {
-        employee: ['dashboard', 'kudos', 'support', 'coffee', 'privacy', 'settings'],
-        manager: ['dashboard', 'manager', 'kudos', 'support', 'privacy', 'settings'],
-        admin: ['admin', 'users', 'privacy', 'settings'],
-        it: ['admin', 'users', 'privacy', 'settings']
+        employee: ['dashboard', 'inbox', 'kudos', 'support', 'coffee', 'privacy', 'settings'],
+        manager: ['dashboard', 'inbox', 'manager', 'kudos', 'support', 'privacy', 'settings'],
+        admin: ['admin', 'inbox', 'users', 'privacy', 'settings'],
+        it: ['admin', 'inbox', 'users', 'privacy', 'settings']
       };
 
       const allowedTabs = roleConfig[role as keyof typeof roleConfig] || roleConfig['employee'];
@@ -150,6 +151,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         if (role === 'admin' || role === 'it') router.replace('/admin');
         else if (role === 'manager') router.replace('/manager');
         else router.replace('/');
+      }
+
+      // Explicitly close the sidebar on mobile upon successful login or route change
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
       }
     }
   }, [authLoading, currentUser, activeTab, router]);
@@ -227,7 +233,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 ${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 min-w-0 ${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
         <Header title={pageTitle} currentUser={currentUser} onLogout={handleLogout} />
 
         {systemPaused && (
@@ -237,7 +243,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-7xl w-full mx-auto">
           <AuthContext.Provider value={{ currentUser, triggerRefresh, session }}>
             {children}
           </AuthContext.Provider>
