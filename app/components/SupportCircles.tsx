@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef} from'react';
-import { Send, ShieldCheck, User, Compass, Plus, X, Search} from'lucide-react';
+import { Send, ShieldCheck, User, Compass, Plus, X, Search, ChevronLeft} from'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { Database} from'../lib/database.types';
 import { useAccessibility} from'../context/AccessibilityContext';
@@ -41,6 +41,7 @@ export default function SupportCircles() {
  const [newCircleDesc, setNewCircleDesc] = useState('');
  const [newCircleEmoji, setNewCircleEmoji] = useState('💬');
  const [searchQuery, setSearchQuery] = useState('');
+ const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
  const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +135,8 @@ export default function SupportCircles() {
  setActiveCircles([...activeCircles, circle]);
  setDiscoverableCircles(discoverableCircles.filter(c => c.id !== circle.id));
  setActiveCircleId(circle.id);
-};
+ setMobileView('chat');
+ };
 
  const filteredDiscoverable = discoverableCircles.filter(circle =>
  circle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -180,50 +182,14 @@ export default function SupportCircles() {
 
  return (
  <>
- <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 h-[550px] glass-card rounded-2xl border overflow-hidden ${highContrast ?'border-black text-black' :'border-border-color'
+ <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] lg:h-[550px] glass-card rounded-2xl border overflow-hidden ${highContrast ?'border-black text-black' :'border-border-color'
 }`}>
  {/* Channels Sidebar List */}
- <div className={`p-4 border-r overflow-y-auto space-y-3.5 flex flex-col justify-between ${highContrast ?'border-black' :'border-border-color bg-neutral-50/20'
+ <div className={`p-4 border-r overflow-y-auto space-y-3.5 flex-col justify-between ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'} ${highContrast ?'border-black' :'border-border-color bg-neutral-50/20'
 }`}>
- <div className="space-y-3">
- <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
- Available Circles
- </span>
- <div className="space-y-1.5" role="listbox" aria-label="Support circles list">
- {activeCircles.map((circle) => {
- const isActive = activeCircleId === circle.id;
-
- let circleStyle ='';
- if (isActive) {
- circleStyle = highContrast
- ?'bg-black text-white border-2 border-black font-bold'
- :'bg-teal-50 border-teal-200 text-teal-900 border font-semibold';
-} else {
- circleStyle ='glass-card hover:bg-neutral-50 text-neutral-600 border border-neutral-100/70';
-}
-
- return (
- <button
- key={circle.id}
- onClick={() => setActiveCircleId(circle.id)}
- role="option"
- aria-selected={isActive}
- className={`w-full text-left p-3.5 rounded-xl transition flex gap-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${circleStyle}`}
- >
- <span className="text-2xl shrink-0 select-none">{circle.emoji}</span>
- <div>
- <span className="block text-xs font-bold leading-none">{circle.name}</span>
- <span className="block text-[10px] text-neutral-400 mt-1 leading-normal line-clamp-2">
- {circle.desc}
- </span>
- </div>
- </button>
- );
-})}
- </div>
-
+ <div className="space-y-4">
  {/* Action Buttons */}
- <div className="mt-3.5 space-y-2">
+ <div className="space-y-2">
  <button
  type="button"
  onClick={() => setIsDiscoverModalOpen(true)}
@@ -248,6 +214,42 @@ export default function SupportCircles() {
  <span>Create New Circle</span>
  </button>
  </div>
+
+ <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+ Available Circles
+ </span>
+ <div className="space-y-1.5" role="listbox" aria-label="Support circles list">
+ {activeCircles.map((circle) => {
+ const isActive = activeCircleId === circle.id;
+
+ let circleStyle ='';
+ if (isActive) {
+ circleStyle = highContrast
+ ?'bg-black text-white border-2 border-black font-bold'
+ :'bg-teal-50 border-teal-200 text-teal-900 border font-semibold';
+} else {
+ circleStyle ='glass-card hover:bg-neutral-50 text-neutral-600 border border-neutral-100/70';
+}
+
+ return (
+ <button
+ key={circle.id}
+ onClick={() => { setActiveCircleId(circle.id); setMobileView('chat'); }}
+ role="option"
+ aria-selected={isActive}
+ className={`w-full text-left p-3.5 rounded-xl transition flex gap-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${circleStyle}`}
+ >
+ <span className="text-2xl shrink-0 select-none">{circle.emoji}</span>
+ <div>
+ <span className="block text-xs font-bold leading-none">{circle.name}</span>
+ <span className="block text-[10px] text-neutral-400 mt-1 leading-normal line-clamp-2">
+ {circle.desc}
+ </span>
+ </div>
+ </button>
+ );
+})}
+ </div>
  </div>
 
  {/* Info Box */}
@@ -261,11 +263,14 @@ export default function SupportCircles() {
  </div>
 
  {/* Main Circle Chat Channel Area */}
- <div className="lg:col-span-2 flex flex-col justify-between h-full glass-card relative min-h-0">
+ <div className={`lg:col-span-2 flex-col justify-between h-full glass-card relative min-h-0 ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
  {/* Chat Header */}
  <div className={`p-4 border-b flex items-center justify-between shrink-0 ${highContrast ?'border-black' :'border-border-color'
 }`}>
  <div className="flex items-center gap-2">
+ <button onClick={() => setMobileView('list')} className="lg:hidden p-1 mr-1 text-neutral-500 hover:text-neutral-700 bg-neutral-100 rounded-full transition" aria-label="Back to circles">
+ <ChevronLeft className="h-5 w-5" />
+ </button>
  <span className="text-2xl select-none">{activeCircle.emoji}</span>
  <div>
  <h2 className="text-xs font-bold text-neutral-800 leading-none">{activeCircle.name} Channel</h2>
@@ -348,9 +353,9 @@ export default function SupportCircles() {
 }`}
  >
  {/* Identity Privacy controls */}
- <div className="flex items-center justify-between">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
  <div className="flex items-center gap-2">
- <label htmlFor="anon-post-toggle" className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+ <label htmlFor="anon-post-toggle" className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider shrink-0">
  Post anonymously:
  </label>
  <button
@@ -367,7 +372,7 @@ export default function SupportCircles() {
  </button>
  </div>
 
- <span className="text-[9px] text-neutral-400">
+ <span className="text-[9px] text-neutral-400 leading-tight">
  {isAnonymous ?"Your identity is hidden behind a protective firewall" :"Your name will be visible to members"}
  </span>
  </div>

@@ -15,9 +15,14 @@ interface SentimentWidgetProps {
 export default function SentimentWidget({ onLogSaved}: SentimentWidgetProps) {
  const { highContrast} = useAccessibility();
  const [isExpanded, setIsExpanded] = useState(true);
+ const [isHidden, setIsHidden] = useState(false);
  const [lastLoggedTime, setLastLoggedTime] = useState<string | null>(null);
  const [showSuccess, setShowSuccess] = useState(false);
  const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
+
+ // Swipe to dismiss states
+ const [swipeOffset, setSwipeOffset] = useState(0);
+ const [touchStart, setTouchStart] = useState<number | null>(null);
 
  const moods = [
  { score: 1, emoji:'😢', label:'Struggling', color:'hover:bg-red-50 text-red-600'},
@@ -56,13 +61,12 @@ export default function SentimentWidget({ onLogSaved}: SentimentWidgetProps) {
 }
 }, [adminConfig]);
 
- // Morning Launch Trigger (Automated, capped at 1/day)
+ // Periodic Launch Trigger (Automated, every 4 hours)
  useEffect(() => {
  const timer = setTimeout(async () => {
  const { data: { user}} = await supabase.auth.getUser();
  if (!user) return;
 
- const todayStr = new Date().toDateString();
  const todayStart = new Date();
  todayStart.setHours(0, 0, 0, 0);
 
@@ -75,25 +79,34 @@ export default function SentimentWidget({ onLogSaved}: SentimentWidgetProps) {
  .limit(1);
 
  const hasLoggedToday = logs && logs.length > 0;
+ let hasLoggedRecently = false;
+ const fourHoursMs = 4 * 60 * 60 * 1000;
+
  if (hasLoggedToday && logs[0]) {
+ const logDate = new Date(logs[0].created_at);
  setLastLoggedTime(
- new Date(logs[0].created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})
+ logDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})
  );
-}
+ 
+ if (Date.now() - logDate.getTime() < fourHoursMs) {
+ hasLoggedRecently = true;
+ }
+ }
 
- const morningTriggeredDate = localStorage.getItem('pulse-morning-checkin-triggered-date');
- const alreadyMorningTriggeredToday = morningTriggeredDate === todayStr;
+ const lastTriggeredStr = localStorage.getItem('pulse-last-triggered-timestamp');
+ const lastTriggered = lastTriggeredStr ? parseInt(lastTriggeredStr, 10) : 0;
+ const timeSinceLastTrigger = Date.now() - lastTriggered;
 
- if (!hasLoggedToday) {
- if (!alreadyMorningTriggeredToday) {
+ if (!hasLoggedRecently) {
+ if (timeSinceLastTrigger > fourHoursMs) {
  setIsExpanded(true);
- localStorage.setItem('pulse-morning-checkin-triggered-date', todayStr);
-} else {
+ localStorage.setItem('pulse-last-triggered-timestamp', Date.now().toString());
+ } else {
  setIsExpanded(false);
-}
-} else {
+ }
+ } else {
  setIsExpanded(false);
-}
+ }
 }, 0);
 
  return () => clearTimeout(timer);
@@ -157,14 +170,52 @@ export default function SentimentWidget({ onLogSaved}: SentimentWidgetProps) {
 }
 };
 
+ if (isHidden) return null;
+
+ const handleTouchStart = (e: React.TouchEvent) => {
+ setTouchStart(e.targetTouches[0].clientX);
+ };
+
+ const handleTouchMove = (e: React.TouchEvent) => {
+ if (touchStart === null) return;
+ const currentTouch = e.targetTouches[0].clientX;
+ const diff = currentTouch - touchStart;
+ 
+ // Allow swiping right to dismiss
+ if (diff > 0) {
+ setSwipeOffset(diff);
+ }
+ };
+
+ const handleTouchEnd = () => {
+ if (swipeOffset > 50) {
+ // Swiped far enough to dismiss
+ setIsHidden(true);
+ }
+ // Reset offset
+ setSwipeOffset(0);
+ setTouchStart(null);
+ };
+
  if (!isExpanded) {
  return (
- <div className="fixed bottom-6 right-6 z-40">
+ <div 
+ className="fixed bottom-6 right-6 z-40 group"
+ onTouchStart={handleTouchStart}
+ onTouchMove={handleTouchMove}
+ onTouchEnd={handleTouchEnd}
+ style={{ 
+ transform: `translateX(${swipeOffset}px)`,
+ opacity: swipeOffset > 0 ? Math.max(0, 1 - swipeOffset / 100) : 1,
+ transition: touchStart === null ? 'transform 0.2s ease-out, opacity 0.2s ease-out' : 'none'
+ }}
+ >
+ <div className="relative">
  <button
  onClick={() => setIsExpanded(true)}
  className={`flex h-14 w-14 items-center justify-center rounded-full bg-teal-600 text-white shadow-xl hover:bg-teal-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
  highContrast ?'bg-black text-white border-2 border-white' :''
-}`}
+ }`}
  aria-label="Open sentiment check-in"
  title="Daily Sentiment Check-in"
  >
@@ -174,9 +225,18 @@ export default function SentimentWidget({ onLogSaved}: SentimentWidgetProps) {
  <Smile className="h-6 w-6 animate-pulse" />
  )}
  </button>
+ <button
+ onClick={(e) => { e.stopPropagation(); setIsHidden(true); }}
+ className="hidden lg:flex absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-full p-1 shadow-md border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-teal-500 z-10"
+ aria-label="Dismiss widget completely"
+ title="Dismiss"
+ >
+ <X className="h-3 w-3" />
+ </button>
+ </div>
  </div>
  );
-}
+ }
 
  return (
  <div
