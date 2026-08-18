@@ -434,11 +434,32 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
           </button>
           
           {isAccessMenuOpen && (
-            <div className={`absolute top-0 right-full mr-3 w-72 sm:w-80 p-4 rounded-xl border bg-white shadow-xl z-50 transition-all animate-fade-in max-h-[80vh] overflow-y-auto custom-scrollbar ${highContrast ? 'border-black text-black' : 'border-border-color'}`} onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-2 border-b pb-3 mb-4 shrink-0">
-                <Accessibility className="h-5 w-5 text-teal-600" />
-                <h2 className="font-bold text-neutral-800 text-sm">Accessibility Hub</h2>
-              </div>
+            <>
+              {/* Mobile Backdrop */}
+              <div className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm sm:hidden animate-fade-in" onClick={(e) => { e.stopPropagation(); setIsAccessMenuOpen(false); }} />
+              
+              <div 
+                className={`
+                  fixed inset-x-4 top-1/2 -translate-y-1/2 z-[101] p-5 rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-y-auto bg-white border
+                  sm:absolute sm:inset-auto sm:top-0 sm:right-full sm:-translate-y-0 sm:mr-3 sm:w-72 md:w-80 sm:p-4 sm:rounded-xl sm:shadow-xl sm:z-50 sm:max-h-[80vh]
+                  transition-all animate-fade-in custom-scrollbar
+                  ${highContrast ? 'border-black text-black' : 'border-border-color'}
+                `} 
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b pb-3 mb-4 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Accessibility className="h-5 w-5 text-teal-600" />
+                    <h2 className="font-bold text-neutral-800 text-sm">Accessibility Hub</h2>
+                  </div>
+                  <button
+                    onClick={() => setIsAccessMenuOpen(false)}
+                    className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 sm:hidden"
+                    aria-label="Close accessibility panel"
+                  >
+                    <X className="h-4 w-4 text-neutral-500" />
+                  </button>
+                </div>
               
               <div className="space-y-4">
                 {/* OpenDyslexic Toggle */}
@@ -589,6 +610,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
                 </div>
               </div>
             </div>
+            </>
           )}
         </div>
 
