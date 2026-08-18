@@ -96,9 +96,20 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  const [cvActive, setCvActive] = useState(false);
   const [cvTooltipVisible, setCvTooltipVisible] = useState(false);
   const [isMobileProfileMenuOpen, setIsMobileProfileMenuOpen] = useState(false);
- const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
- const [loading, setLoading] = useState(false);
- const [videoMode, setVideoMode] = useState<'normal' |'fullscreen' |'bubble'>('normal');
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Prevent scrolling on mobile when full-screen modals are open
+  useEffect(() => {
+    if (isAccessMenuOpen || isMobileProfileMenuOpen || isNotifMenuOpen) {
+      document.body.classList.add('overflow-hidden', 'sm:overflow-auto');
+    } else {
+      document.body.classList.remove('overflow-hidden', 'sm:overflow-auto');
+    }
+    return () => document.body.classList.remove('overflow-hidden', 'sm:overflow-auto');
+  }, [isAccessMenuOpen, isMobileProfileMenuOpen, isNotifMenuOpen]);
+
+  const [videoMode, setVideoMode] = useState<'normal' |'fullscreen' |'bubble'>('normal');
 
  const [position, setPosition] = useState({ x: 0, y: 0});
  const [isDraggingState, setIsDraggingState] = useState(false);
@@ -286,7 +297,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
 
  return (
  <>
- <header className={`sticky top-0 right-0 z-50 flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${highContrast
+ <header className={`sticky top-0 right-0 ${isAccessMenuOpen ? 'z-[70]' : 'z-50'} flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${highContrast
  ?'border-black bg-white text-black'
  :'border-border-color'
 }`}>
