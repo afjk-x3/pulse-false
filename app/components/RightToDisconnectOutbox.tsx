@@ -71,7 +71,8 @@ export default function RightToDisconnectOutbox({ onRefreshStats, refreshTrigger
 
  // Initial load and refresh-trigger reload
  useEffect(() => {
- fetchMessages();
+ const timer = setTimeout(() => fetchMessages(), 0);
+ return () => clearTimeout(timer);
 }, [fetchMessages, refreshTrigger]);
 
  // Realtime subscription — reflect delivery and status changes instantly

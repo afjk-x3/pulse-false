@@ -32,6 +32,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const triggerRefresh = useCallback(() => setRefreshTrigger(prev => prev + 1), []);
 
+  async function fetchUserProfile(userId: string) {
+    try {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (data) {
+        setCurrentUser(data);
+      } else {
+        setLoginError('Authentication successful, but no User Profile was found.');
+      }
+    } catch {
+      setLoginError('Failed to fetch user profile.');
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -56,25 +76,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [refreshTrigger]);
 
-  async function fetchUserProfile(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
 
-      if (data) {
-        setCurrentUser(data);
-      } else {
-        setLoginError('Authentication successful, but no User Profile was found.');
-      }
-    } catch (e) {
-      setLoginError('Failed to fetch user profile.');
-    } finally {
-      setAuthLoading(false);
-    }
-  }
 
   const handleLogin = async (email: string, password = 'password123') => {
     setAuthLoading(true);
@@ -155,7 +157,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       // Explicitly close the sidebar on mobile upon successful login or route change
       if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
+        const timer = setTimeout(() => setIsSidebarOpen(false), 0);
+        return () => clearTimeout(timer);
       }
     }
   }, [authLoading, currentUser, activeTab, router]);
@@ -278,7 +281,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     full_name: pName.trim(), phone: pPhone.trim(), address: pAddress ? pAddress.trim() : null
                   }).eq('id', currentUser.id);
                   triggerRefresh();
-                } catch (e) {
+                } catch {
                   alert('Failed to save profile setup.');
                 }
               }

@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect, useRef} from'react';
 import { createPortal} from'react-dom';
-import Image from'next/image';
+
 import {
  Accessibility,
  Video,
  VideoOff,
- Sparkles,
  X,
  LogOut,
  Maximize,
@@ -94,7 +93,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
     await supabase.from('notifications').update({ read: true }).eq('id', id);
   };
  const [cvActive, setCvActive] = useState(false);
-  const [cvTooltipVisible, setCvTooltipVisible] = useState(false);
+
   const [isMobileProfileMenuOpen, setIsMobileProfileMenuOpen] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,8 +117,9 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
 
  const [mounted, setMounted] = useState(false);
  useEffect(() => {
- setMounted(true);
-}, []);
+  const timer = setTimeout(() => setMounted(true), 0);
+  return () => clearTimeout(timer);
+ }, []);
 
  const videoRef = useRef<HTMLVideoElement>(null);
  const streamRef = useRef<MediaStream | null>(null);
@@ -257,9 +257,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  localStorage.setItem('pulse-cv-active','false');
  updateConsentDB(false);
 
- setCvTooltipVisible(true);
- const timer = setTimeout(() => setCvTooltipVisible(false), 4000);
- return () => clearTimeout(timer);
+
 } else {
  const consent = localStorage.getItem('pulse-cv-consent') ==='true';
  if (consent) {
@@ -267,9 +265,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  localStorage.setItem('pulse-cv-active','true');
  updateConsentDB(true);
 
- setCvTooltipVisible(true);
- const timer = setTimeout(() => setCvTooltipVisible(false), 4000);
- return () => clearTimeout(timer);
+
 } else {
  setIsConsentModalOpen(true);
 }
@@ -283,8 +279,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  setIsConsentModalOpen(false);
  updateConsentDB(true);
 
- setCvTooltipVisible(true);
- setTimeout(() => setCvTooltipVisible(false), 4000);
+
 };
 
  const handleDeclineConsent = () => {

@@ -85,10 +85,12 @@ export default function CalendarGuard() {
  // Compute invitee timezone status when inputs change
  useEffect(() => {
  if (selectedInvitees.length === 0 || !meetingStart) {
- setInviteeStatuses([]);
- setShowAltSlots(false);
- return;
-}
+  const timer = setTimeout(() => {
+   setInviteeStatuses([]);
+   setShowAltSlots(false);
+  }, 0);
+  return () => clearTimeout(timer);
+ }
 
  const statuses: InviteeStatus[] = selectedInvitees.map(profileId => {
  const profile = allProfiles.find(p => p.id === profileId);
@@ -128,7 +130,8 @@ export default function CalendarGuard() {
 };
 });
 
- setInviteeStatuses(statuses);
+ const timer = setTimeout(() => setInviteeStatuses(statuses), 0);
+ return () => clearTimeout(timer);
 }, [selectedInvitees, meetingStart, allProfiles]);
 
  const generateAlternates = () => {

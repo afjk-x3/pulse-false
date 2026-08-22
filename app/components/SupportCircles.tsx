@@ -26,7 +26,7 @@ interface UIMessage extends SupportCircleMessage {
 export default function SupportCircles() {
  const { highContrast} = useAccessibility();
  const [messages, setMessages] = useState<UIMessage[]>([]);
- const [profiles, setProfiles] = useState<Record<string, string>>({});
+
  const [currentUser, setCurrentUser] = useState<any>(null);
 
  const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +89,7 @@ export default function SupportCircles() {
 };
 }, []);
 
- const fetchMessages = async (currentUserId: string | undefined) => {
+ async function fetchMessages(currentUserId: string | undefined) {
  // Fetch profiles fresh so we always have the latest names
  const { data: profileData} = await supabase.from('user_profiles').select('id, full_name');
  const profileMap: Record<string, string> = {};

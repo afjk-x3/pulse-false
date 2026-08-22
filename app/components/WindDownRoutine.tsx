@@ -10,7 +10,6 @@ import {
   X, 
   CheckCircle,
   AlertTriangle,
-  Battery,
   BatteryWarning,
   BatteryFull,
   BatteryMedium,
@@ -36,7 +35,7 @@ const MOOD_OPTIONS = [
 export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCount }: WindDownRoutineProps) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedMood, setSelectedMood] = useState<number | null>(null);
+
 
   if (!isOpen) return null;
 
@@ -48,7 +47,6 @@ export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCo
   ];
 
   const handleMoodSelect = async (level: number) => {
-    setSelectedMood(level);
     setIsSubmitting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -69,7 +67,6 @@ export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCo
 
   const handleClose = () => {
     setStep(0);
-    setSelectedMood(null);
     onClose();
   };
 
@@ -99,7 +96,7 @@ export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCo
               </div>
               <h3 className="text-2xl font-semibold text-neutral-800">Time to wrap up!</h3>
               <p className="text-neutral-600">
-                You're nearing the end of your working hours. Let's do a quick routine to help you disconnect properly and prepare for tomorrow.
+                You&apos;re nearing the end of your working hours. Let&apos;s do a quick routine to help you disconnect properly and prepare for tomorrow.
               </p>
               <button 
                 onClick={() => setStep(1)}
@@ -124,7 +121,7 @@ export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCo
                       You have <strong className="text-teal-700">{outboxCount}</strong> messages in your Right-to-Disconnect Outbox.
                     </p>
                     <p className="text-sm text-neutral-500">
-                      They are safely scheduled to deliver tomorrow morning at {userProfile?.working_hours_start || '09:00 AM'}. You don't need to do anything.
+                      They are safely scheduled to deliver tomorrow morning at {userProfile?.working_hours_start || '09:00 AM'}. You don&apos;t need to do anything.
                     </p>
                   </div>
                 ) : (
@@ -150,7 +147,7 @@ export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCo
             <div className="space-y-6 animate-fade-in">
               <div className="flex items-center gap-3 text-neutral-800 font-semibold mb-2">
                 <Calendar className="h-5 w-5 text-teal-600" />
-                <h3>Tomorrow's Schedule</h3>
+                <h3>Tomorrow&apos;s Schedule</h3>
               </div>
               
               <div className="space-y-3">
@@ -217,9 +214,9 @@ export default function WindDownRoutine({ isOpen, onClose, userProfile, outboxCo
               <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle className="h-8 w-8" />
               </div>
-              <h3 className="text-2xl font-semibold text-neutral-800">You're all set!</h3>
+              <h3 className="text-2xl font-semibold text-neutral-800">You&apos;re all set!</h3>
               <p className="text-neutral-600">
-                You've cleared your inbox, reviewed your schedule, and logged your mood. Now it's time to fully disconnect. Have a great evening!
+                You&apos;ve cleared your inbox, reviewed your schedule, and logged your mood. Now it&apos;s time to fully disconnect. Have a great evening!
               </p>
               <button 
                 onClick={handleClose}

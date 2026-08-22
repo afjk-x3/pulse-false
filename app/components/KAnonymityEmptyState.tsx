@@ -102,7 +102,7 @@ export default function KAnonymityEmptyState() {
  </h3>
  
  <p className="text-xs text-neutral-500 max-w-xs leading-normal">
- Team insights are locked until at least 5 team members share their updates, keeping everyone's personal responses completely private.
+ Team insights are locked until at least 5 team members share their updates, keeping everyone&apos;s personal responses completely private.
  </p>
 
  <div className="mt-3.5 px-3 py-1.5 bg-neutral-50 rounded-lg border border-neutral-100 text-[10px] text-neutral-400 font-medium">

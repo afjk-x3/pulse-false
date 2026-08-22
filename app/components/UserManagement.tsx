@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { UserCog, Search, ShieldAlert, Plus, Trash2, Power, PowerOff, UserCheck, Check } from 'lucide-react';
+import { UserCog, Search, ShieldAlert, Plus, Trash2, Power, PowerOff, UserCheck } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { Database } from '../lib/database.types';
 
 export default function UserManagement() {
     const { highContrast } = useAccessibility();
@@ -42,7 +41,8 @@ export default function UserManagement() {
     }, []);
 
     useEffect(() => {
-        fetchUsers();
+        const timer = setTimeout(() => fetchUsers(), 0);
+        return () => clearTimeout(timer);
     }, [fetchUsers]);
 
     const handleProvision = async (e: React.FormEvent) => {
@@ -229,7 +229,7 @@ export default function UserManagement() {
                                 <tbody>
                                     {filteredUsers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="py-8 text-center text-neutral-400 font-medium">No users found matching "{searchQuery}"</td>
+                                            <td colSpan={4} className="py-8 text-center text-neutral-400 font-medium">No users found matching &quot;{searchQuery}&quot;</td>
                                         </tr>
                                     ) : filteredUsers.map((u) => (
                                         <tr key={u.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/50 transition-colors">

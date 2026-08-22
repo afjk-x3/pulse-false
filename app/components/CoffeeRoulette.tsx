@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect} from'react';
-import { Coffee, Calendar, RefreshCw, AlertCircle, CheckCircle2, Sliders, Send, MessageCircle } from 'lucide-react';
+import { Coffee, Calendar, RefreshCw, AlertCircle, CheckCircle2, Send, MessageCircle } from 'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { useAccessibility} from'../context/AccessibilityContext';
 
@@ -57,7 +57,11 @@ export default function CoffeeRoulette() {
  useEffect(() => {
  // Load local pause state
  const savedPause = localStorage.getItem('pulse-coffee-roulette-paused');
- if (savedPause ==='true') setIsPaused(true);
+  if (savedPause ==='true') {
+   setTimeout(() => setIsPaused(true), 0);
+   // We won't return cleanup here directly since fetchPairing runs below.
+   // Safe to just fire and forget for a 0ms timeout on mount.
+  }
 
  const fetchPairing = async () => {
  setInitialLoading(true);

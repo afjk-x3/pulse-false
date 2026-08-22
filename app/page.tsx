@@ -128,7 +128,7 @@ export default function Home() {
           {/* 7-Day Burnout Risk heatmap */}
           <div className="focus-dimming-card glass-card rounded-2xl overflow-hidden flex flex-col">
             <BurnoutRiskIndex
-              onNavigateToTab={(tab) => {}}
+              onNavigateToTab={() => {}}
               refreshTrigger={refreshTrigger}
             />
           </div>

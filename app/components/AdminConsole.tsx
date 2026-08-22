@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Key, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video, Users, UserCheck, Plus } from 'lucide-react';
+import { Sliders, ShieldAlert, Check, AlertOctagon, Save, Globe, Eye, EyeOff, BarChart3, FileJson, FileSpreadsheet, Video } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import { Database } from '../lib/database.types';
 import { useAccessibility } from '../context/AccessibilityContext';
 
 type AdminConfig = Database['public']['Tables']['admin_configs']['Row'];
-type SecurityConfig = Database['public']['Tables']['security_configs']['Row'];
 type AuditLogEntry = Database['public']['Tables']['audit_logs']['Row'];
 
 // Extended Audit log type for UI rendering
@@ -138,13 +137,14 @@ export default function AdminConsole() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
-    fetchAllData();
+    const timer = setTimeout(() => fetchAllData(), 0);
+    return () => clearTimeout(timer);
   }, [fetchAllData]);
 
-  const refreshAuditLogs = async () => {
+  async function refreshAuditLogs() {
     const { data: logsData } = await supabase
       .from('audit_logs')
       .select('*')

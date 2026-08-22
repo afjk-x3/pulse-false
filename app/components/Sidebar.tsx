@@ -8,14 +8,9 @@ import {
     Award,
     Users,
     Lock,
-    Menu,
-    X,
     Coffee,
     Sliders,
-    LogOut,
     Settings,
-    ChevronLeft,
-    ChevronRight,
     UserCog,
     MessageCircle
 } from 'lucide-react';
@@ -42,7 +37,7 @@ interface SidebarProps {
     setIsCollapsed: (collapsed: boolean) => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen, currentUser, onLogout, isCollapsed, setIsCollapsed }: SidebarProps) {
+export default function Sidebar({ activeTab, isOpen, setIsOpen, currentUser, isCollapsed, setIsCollapsed }: SidebarProps) {
     const { highContrast } = useAccessibility();
 
     const fullItems = [

@@ -7,7 +7,7 @@ import { Database} from'../lib/database.types';
 import { useAccessibility} from'../context/AccessibilityContext';
 
 type KudosPost = Database['public']['Tables']['kudos_posts']['Row'];
-type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+
 
 // Extended type for rendering
 interface KudosWithProfiles extends KudosPost {
@@ -97,7 +97,7 @@ export default function KudosFeed() {
 };
 }, []);
 
- const fetchKudos = async (profileMap: Record<string, { name: string, role: string}>) => {
+ async function fetchKudos(profileMap: Record<string, { name: string, role: string}>) {
  const { data: kudosData, error: fetchErr} = await supabase
  .from('kudos_posts')
  .select('*')
@@ -296,7 +296,7 @@ export default function KudosFeed() {
  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4 border border-amber-100">
  <Award className="h-6 w-6 text-amber-500" />
  </div>
- <p className="text-xs font-bold text-neutral-700">Let's spread some positivity!</p>
+ <p className="text-xs font-bold text-neutral-700">Let&apos;s spread some positivity!</p>
  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm mx-auto leading-relaxed">
  Take a moment to recognize a teammate whose hard work made your day easier. Your appreciation means more than you think.
  </p>

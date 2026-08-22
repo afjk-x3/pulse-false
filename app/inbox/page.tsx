@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AuthContext } from '../components/AppShell';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { Search, Send, ShieldAlert, Clock, Info, Check, UserCircle } from 'lucide-react';
+import { Search, Send, ShieldAlert, Clock, Info, UserCircle } from 'lucide-react';
 import Image from 'next/image';
 
 interface Contact {
