@@ -8,6 +8,7 @@ import SentimentTrendLine from './components/SentimentTrendLine';
 import BRIExplainerCard from './components/BRIExplainerCard';
 import CalendarGuard from './components/CalendarGuard';
 import BRIExplanationFeed from './components/BRIExplanationFeed';
+import MeetingTimeline from './components/MeetingTimeline';
 
 import { useAccessibility } from './context/AccessibilityContext';
 import { Heart, ThumbsUp, Inbox, Moon } from 'lucide-react';
@@ -167,6 +168,11 @@ export default function Home() {
               onRefreshStats={triggerRefresh}
               refreshTrigger={refreshTrigger}
             />
+          </div>
+
+          {/* Upcoming Meetings Timeline */}
+          <div className="focus-dimming-card glass-card rounded-2xl overflow-hidden flex flex-col">
+            <MeetingTimeline />
           </div>
         </div>
 

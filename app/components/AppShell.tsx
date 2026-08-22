@@ -42,6 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       if (data) {
         setCurrentUser(data);
+        return data;
       } else {
         setLoginError('Authentication successful, but no User Profile was found.');
       }
@@ -86,7 +87,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       if (data?.session) {
         setSession(data.session);
-        await fetchUserProfile(data.session.user.id);
+        const profile = await fetchUserProfile(data.session.user.id);
+        if (profile) {
+          const role = (profile.role || profile.roleName || 'employee').toLowerCase();
+          if (role === 'admin' || role === 'it') {
+            router.push('/admin');
+          } else if (role === 'manager') {
+            router.push('/manager');
+          }
+        }
       }
     } catch (err: any) {
       setLoginError(err.message || 'Login failed');
@@ -223,20 +232,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const setupIncomplete = Boolean(currentUser && !currentUser.phone);
+
   return (
     <div className={`min-h-screen flex bg-background text-foreground transition-colors duration-300 ${highContrast ? 'high-contrast' : ''}`}>
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={() => { }} // Disabled as we use Links now
-        isOpen={isSidebarOpen}
-        setIsOpen={setIsSidebarOpen}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-      />
+      {!setupIncomplete && (
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={() => { }} // Disabled as we use Links now
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+      )}
 
-      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 min-w-0 ${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen relative transition-all duration-300 min-w-0 ${setupIncomplete ? '' : (isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72')}`}>
         <Header title={pageTitle} currentUser={currentUser} onLogout={handleLogout} />
 
         {systemPaused && (
@@ -253,16 +266,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {!systemPaused && (
+      {!systemPaused && !setupIncomplete && (
         <>
           <SentimentWidget onLogSaved={triggerRefresh} />
           <MicroCoachingNudge />
         </>
       )}
 
-      {currentUser && !currentUser.phone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-teal-900/60 backdrop-blur-md p-4">
-          <div className={`w-full max-w-lg p-6 glass-card rounded-2xl border shadow-xl flex flex-col gap-4 border-border-color`}>
+      {setupIncomplete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          <div className={`w-full max-w-lg p-6 bg-background rounded-2xl border shadow-xl flex flex-col gap-4 border-border-color`}>
             <div>
               <h2 className="text-lg font-bold">Complete Your Profile Setup</h2>
               <p className="text-xs opacity-70 mt-1">First-time login setup: Please verify and fill out your required profile information.</p>

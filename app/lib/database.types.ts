@@ -410,6 +410,7 @@ export type Database = {
         Row: {
           attendees: Json
           created_at: string
+          description: string | null
           end_time: string
           id: string
           is_compliant: boolean
@@ -420,6 +421,7 @@ export type Database = {
         Insert: {
           attendees?: Json
           created_at?: string
+          description?: string | null
           end_time: string
           id?: string
           is_compliant?: boolean
@@ -430,6 +432,7 @@ export type Database = {
         Update: {
           attendees?: Json
           created_at?: string
+          description?: string | null
           end_time?: string
           id?: string
           is_compliant?: boolean
