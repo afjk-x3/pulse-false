@@ -14,6 +14,15 @@ import {
 } from'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { useAccessibility} from'../context/AccessibilityContext';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
 
 export default function PrivacyCenter() {
  const { highContrast} = useAccessibility();
@@ -136,8 +145,8 @@ export default function PrivacyCenter() {
  return (
  <div className="space-y-6">
  {/* Introduction Card */}
- <div className={`p-6 glass-card rounded-2xl border flex flex-col sm:flex-row gap-5 items-start justify-between ${
- highContrast ?'border-black text-black' :'border-border-color'
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl flex flex-col sm:flex-row gap-5 items-start justify-between ${
+ highContrast ? 'text-black' : ''
 }`}>
  <div className="space-y-2">
  <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
@@ -151,13 +160,13 @@ export default function PrivacyCenter() {
  <span className="px-3 py-1 bg-[#EAEFE9] text-[#2F4F2F] border border-[#C3D2C1] rounded-full text-[10px] font-bold shrink-0">
  PRIVACY GUARANTEED
  </span>
- </div>
+ </Card>
 
  {/* Protocol Explanation Cards */}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  {/* k-Anonymity card */}
- <div className={`p-6 glass-card rounded-2xl border space-y-4 ${
- highContrast ?'border-black text-black' :'border-border-color'
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl space-y-4 ${
+ highContrast ? 'text-black' : ''
 }`}>
  <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
  <Lock className="h-5 w-5 text-teal-600" />
@@ -170,11 +179,11 @@ export default function PrivacyCenter() {
  <strong className="text-neutral-600 block">How it works:</strong>
  <p>If your team has fewer than 5 members, or if fewer than 5 people log their mood, all group charts are automatically blurred out. Team summaries only display when there is a large enough group to keep you anonymous.</p>
  </div>
- </div>
+ </Card>
 
  {/* Local CV processing card */}
- <div className={`p-6 glass-card rounded-2xl border space-y-4 ${
- highContrast ?'border-black text-black' :'border-border-color'
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl space-y-4 ${
+ highContrast ? 'text-black' : ''
 } ${cvGlobalDisabled ?'opacity-60' :''}`}>
  {cvGlobalDisabled && (
  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold">
@@ -193,12 +202,12 @@ export default function PrivacyCenter() {
  <strong className="text-neutral-600 block">Data Safety Guarantee:</strong>
  <p>All camera calculations happen directly inside your browser. No video, images, or facial recognition profiles are ever saved, stored, or sent over the internet. Your webcam stream never leaves your computer.</p>
  </div>
- </div>
+ </Card>
  </div>
 
  {/* Data Management Center */}
- <div className={`p-6 glass-card rounded-2xl border space-y-5 ${
- highContrast ?'border-black text-black' :'border-border-color'
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl space-y-5 ${
+ highContrast ? 'text-black' : ''
 }`}>
  <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
  <Database className="h-5 w-5 text-teal-600" />
@@ -218,57 +227,41 @@ export default function PrivacyCenter() {
 
  {/* Action buttons */}
  <div className="flex flex-wrap gap-2.5">
- <button
- onClick={handleExportData}
- disabled={isExporting}
- className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${
- highContrast
- ?'bg-black text-white hover:bg-neutral-800 border-2 border-black'
- :'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
-}`}
- >
+ <Button onClick={handleExportData} disabled={isExporting} className="gap-1.5">
  <Download className="h-4.5 w-4.5" />
- <span>{isExporting ?'Exporting...' :'Download My Data (JSON File)'}</span>
- </button>
+ <span>{isExporting ? 'Exporting...' : 'Download My Data (JSON File)'}</span>
+ </Button>
 
- <button
+ <Button
+ variant="ghost"
  onClick={() => setShowPurgeConfirm(true)}
- className="px-4 py-2 text-xs font-bold rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 flex items-center gap-1.5 transition focus:outline-none focus:ring-2 focus:ring-red-500"
+ className="gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 focus:ring-2 focus:ring-red-500"
  >
  <Trash2 className="h-4.5 w-4.5" />
  <span>Delete My Profile</span>
- </button>
+ </Button>
  </div>
  </div>
- </div>
+ </Card>
 
  {/* Purge Profile Warning dialog */}
- {showPurgeConfirm && (
- <div
- className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/40 backdrop-blur-xs animate-fade-in"
- role="dialog"
- aria-modal="true"
- aria-labelledby="purge-title"
- aria-describedby="purge-desc"
- >
- <div className={`w-full max-w-md p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
- highContrast ?'border-black text-black' :'border-neutral-100'
-}`}>
- {/* Header */}
+ <Dialog open={showPurgeConfirm} onOpenChange={setShowPurgeConfirm}>
+ <DialogContent className={`sm:max-w-md space-y-4 ${highContrast ? 'text-black' : ''}`}>
+ <DialogHeader>
  <div className="flex items-start gap-3">
  <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
  <AlertTriangle className="h-5 w-5" />
  </div>
  <div>
- <h3 id="purge-title" className="text-sm font-bold text-neutral-800">
+ <DialogTitle className="text-sm font-bold text-neutral-800">
  Confirm Profile Deletion?
- </h3>
+ </DialogTitle>
  <span className="text-[10px] font-semibold text-red-600 block mt-0.5">This cannot be undone</span>
  </div>
  </div>
+ </DialogHeader>
 
- {/* Body */}
- <div id="purge-desc" className="text-xs text-neutral-500 leading-relaxed space-y-2">
+ <div className="text-xs text-neutral-500 leading-relaxed space-y-2">
  {purgeSuccess ? (
  <div className="py-4 text-center space-y-3">
  <div className="h-12 w-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
@@ -293,28 +286,25 @@ export default function PrivacyCenter() {
  )}
  </div>
 
- {/* Footer */}
  {!purgeSuccess && (
- <div className="flex items-center justify-end gap-2 border-t pt-3.5 border-neutral-100">
- <button
- onClick={() => setShowPurgeConfirm(false)}
- className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition"
- >
+ <DialogFooter>
+ <Button variant="secondary" size="sm" onClick={() => setShowPurgeConfirm(false)}>
  Cancel
- </button>
- <button
+ </Button>
+ <Button
+ variant="destructive"
+ size="sm"
  onClick={handlePurgeData}
  disabled={isPurging}
- className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+ className="gap-1.5"
  >
  <Trash2 className="h-4 w-4" />
- <span>{isPurging ?'Submitting...' :'Delete All Data'}</span>
- </button>
- </div>
+ <span>{isPurging ? 'Submitting...' : 'Delete All Data'}</span>
+ </Button>
+ </DialogFooter>
  )}
- </div>
- </div>
- )}
+ </DialogContent>
+ </Dialog>
  </div>
  );
 }
