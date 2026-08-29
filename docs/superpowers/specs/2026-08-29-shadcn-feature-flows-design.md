@@ -173,8 +173,20 @@ planned one at a time as prior ones land.
 ### 5. `/kudos` — Kudos Feed
 - `app/kudos/page.tsx` (currently 5 lines, same thin-wrapper shape as
   `/privacy`) — unchanged structurally.
-- `app/components/KudosFeed.tsx` (540 lines) — refactor post cards onto
-  shadcn `Card`; post-creation flow onto shadcn `Dialog` + `Button`.
+- **Corrected during implementation planning:** `Card`/`Dialog`/`Button`
+  were right, but the composer form inside the dialog also needs shadcn
+  `Select` (the category dropdown) and `Textarea` (the message field) —
+  not previously listed. The recipient field (a hand-built search input
+  plus a manual dropdown `<ul>`) was upgraded to shadcn's `Popover`+
+  `Command` combobox instead of a plain `Input` — a deliberate scope
+  increase, not presentation-identical like the rest of this route.
+  `app/components/KudosFeed.tsx` (541 lines) — refactor post cards onto
+  shadcn `Card`; post-creation flow onto shadcn `Dialog` + `Button` +
+  `Select` + `Textarea` + `Popover`/`Command`.
+- `app/components/ui/select.tsx`, `textarea.tsx`, `popover.tsx`,
+  `command.tsx` **(new, via shadcn CLI; `input-group.tsx` also generated
+  as `command.tsx`'s internal dependency, and `cmdk` as a new npm
+  dependency)**.
 
 ### 6. `/support` — Support Circles
 - `app/support/page.tsx` (currently 5 lines, same thin-wrapper shape as
