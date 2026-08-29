@@ -89,7 +89,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         setSession(data.session);
         const profile = await fetchUserProfile(data.session.user.id);
         if (profile) {
-          const role = (profile.role || profile.roleName || 'employee').toLowerCase();
+          const role = (profile.role || (profile as any).roleName || 'employee').toLowerCase();
           if (role === 'admin' || role === 'it') {
             router.push('/admin');
           } else if (role === 'manager') {

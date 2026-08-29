@@ -18,6 +18,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local Supabase CLI cache, not part of the app.
+    "supabase/.temp/**",
+    "supabase/.branches/**",
+    // Playwright/Vitest output, not source.
+    "playwright-report/**",
+    "test-results/**",
+    // One-off Node scripts, not part of the Next.js app.
+    "capture_ui.js",
+    "seed.js",
   ]),
 ]);
 
