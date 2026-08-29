@@ -21,6 +21,12 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -57,6 +63,12 @@
   --card-foreground: var(--foreground);
   --popover: var(--card-bg);       /* dialog.tsx paints its panel with bg-popover; keep it in lockstep with --card */
   --popover-foreground: var(--foreground);
+  --secondary: #f5f5f5;            /* neutral-100, matches existing bg-neutral-100 usage for subdued surfaces */
+  --secondary-foreground: var(--foreground);
+  --muted: #f5f5f5;                /* neutral-100, same subdued surface as --secondary */
+  --muted-foreground: #737373;     /* neutral-500, matches existing text-neutral-500 usage for de-emphasized text */
+  --accent: #f5f5f5;               /* neutral-100, subtle hover surface (not yet used by button/card/dialog; added for the next shadcn primitive that needs it) */
+  --accent-foreground: var(--foreground);
   --border: var(--border-color);
   --input: var(--border-color);
   --ring: #14b8a6;                 /* teal-500, matches existing focus:ring-teal-500 usage */
@@ -130,6 +142,12 @@ body.high-contrast {
   --destructive-foreground: #ffffff;
   --card: #ffffff;
   --popover: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: #000000;
+  --muted: #ffffff;
+  --muted-foreground: #000000;
+  --accent: #ffffff;
+  --accent-foreground: #000000;
   --border: #000000;
   --ring: #000000;
 }
