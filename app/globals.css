@@ -1,36 +1,71 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.cdnfonts.com/css/opendyslexic');
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card-bg: var(--card-bg);
   --color-border-color: var(--border-color);
+
+  /* shadcn/ui semantic tokens */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 :root {
-  --background: #f4f6f8;      
-  --foreground: #1c252e;      
+  --background: #f4f6f8;
+  --foreground: #1c252e;
   --card-bg: rgba(255, 255, 255, 0.6);
   --border-color: rgba(255, 255, 255, 0.5);
-  
+
   --sage-bg: #EAEFE9;
   --sage-border: #C3D2C1;
   --sage-text: #2F4F2F;
-  
+
   --cerulean-bg: #E8F1F5;
   --cerulean-border: #BDD4E2;
   --cerulean-text: #1D3B51;
-  
+
   --terracotta-bg: #F9ECE7;
   --terracotta-border: #ECCBBF;
   --terracotta-text: #6A2B15;
+
+  /* shadcn/ui semantic tokens, mapped onto the existing palette */
+  --primary: #0d9488;              /* teal-600, matches existing button/accent usage */
+  --primary-foreground: #ffffff;
+  --destructive: #dc2626;          /* red-600, matches existing danger-button usage */
+  --destructive-foreground: #ffffff;
+  --card: var(--card-bg);
+  --card-foreground: var(--foreground);
+  --popover: var(--card-bg);       /* dialog.tsx paints its panel with bg-popover; keep it in lockstep with --card */
+  --popover-foreground: var(--foreground);
+  --border: var(--border-color);
+  --input: var(--border-color);
+  --ring: #14b8a6;                 /* teal-500, matches existing focus:ring-teal-500 usage */
+  --radius: 0.75rem;               /* matches existing rounded-xl on buttons/inputs */
 }
 
 body {
   background-color: #f4f6f8;
-  background-image: 
+  background-image:
     radial-gradient(at 0% 0%, hsla(170,39%,80%,1) 0px, transparent 50%),
     radial-gradient(at 100% 0%, hsla(200,40%,85%,1) 0px, transparent 50%),
     radial-gradient(at 50% 100%, hsla(150,40%,85%,1) 0px, transparent 50%);
@@ -74,21 +109,32 @@ body.high-contrast {
   --foreground: #000000;
   --card-bg: #FFFFFF;
   --border-color: #000000;
-  
+
   --sage-bg: #FFFFFF;
   --sage-border: #008000;
   --sage-text: #008000;
-  
+
   --cerulean-bg: #FFFFFF;
   --cerulean-border: #0000FF;
   --cerulean-text: #0000FF;
-  
+
   --terracotta-bg: #FFFFFF;
   --terracotta-border: #FF0000;
   --terracotta-text: #FF0000;
+
+  /* shadcn/ui tokens: force pure black/white, matching every other
+     high-contrast override in this file */
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --card: #ffffff;
+  --popover: #ffffff;
+  --border: #000000;
+  --ring: #000000;
 }
 
-body.high-contrast .border, 
+body.high-contrast .border,
 body.high-contrast [class*="border-"] {
   border-color: #000000 !important;
   border-width: 1.5px !important;
