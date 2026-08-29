@@ -4,6 +4,10 @@ import React, { useState, useEffect} from'react';
 import { Coffee, Calendar, RefreshCw, AlertCircle, CheckCircle2, Send, MessageCircle } from 'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { useAccessibility} from'../context/AccessibilityContext';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { Input } from './ui/input';
+import { Switch } from './ui/switch';
 
 const CONVERSATION_STARTERS = [
 'How are you managing off-hours deployment syncs?',
@@ -13,11 +17,11 @@ const CONVERSATION_STARTERS = [
 
 export default function CoffeeRoulette() {
  const { highContrast} = useAccessibility();
- 
+
  const [pairedName, setPairedName] = useState<string | null>(null);
  const [pairedRole, setPairedRole] = useState<string | null>(null);
  const [pairedAvatar, setPairedAvatar] = useState<string | null>(null);
- 
+
  const [isPaused, setIsPaused] = useState(false);
  const [scheduleSuccess, setScheduleSuccess] = useState(false);
  const [loading, setLoading] = useState(false);
@@ -46,7 +50,7 @@ export default function CoffeeRoulette() {
      ];
      const reply = mockReplies[Math.floor(Math.random() * mockReplies.length)];
      setMessages(prev => [...prev, { sender: 'them', text: reply }]);
-     
+
      // Trigger the schedule CTA after they reply
      setTimeout(() => {
        setChatStage('ready_to_call');
@@ -150,8 +154,8 @@ export default function CoffeeRoulette() {
  return (
  <div className="space-y-6">
  {/* Intro header */}
- <div className={`p-6 glass-card rounded-2xl border flex flex-col md:flex-row gap-5 items-start justify-between ${
- highContrast ?'border-black text-black' :'border-border-color'
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl flex flex-col md:flex-row gap-5 items-start justify-between ${
+ highContrast ? 'text-black' : ''
 }`}>
  <div className="space-y-2">
  <h2 className="text-base font-bold text-neutral-800 flex items-center gap-2">
@@ -168,56 +172,43 @@ export default function CoffeeRoulette() {
  <label htmlFor="roulette-pause-toggle" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
  Active Pairing:
  </label>
- <button
+ <Switch
  id="roulette-pause-toggle"
- role="switch"
- aria-checked={!isPaused}
- onClick={handleTogglePause}
- className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${
- !isPaused ?'bg-teal-600' :'bg-neutral-200'
-}`}
- >
- <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full glass-card shadow-sm ring-0 transition duration-200 ease-in-out ${
- !isPaused ?'translate-x-4' :'translate-x-0'
-}`} />
- </button>
+ checked={!isPaused}
+ onCheckedChange={handleTogglePause}
+ />
  </div>
- </div>
+ </Card>
 
  {/* Main card */}
  {isPaused ? (
- <div className={`p-12 text-center glass-card rounded-2xl border ${
- highContrast ?'border-black' :'border-border-color'
-}`}>
+ <Card className={`p-12 text-center glass-card bg-transparent border-transparent shadow-none rounded-2xl`}>
  <AlertCircle className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
  <p className="text-xs font-semibold text-neutral-700">Coffee Roulette is Paused</p>
  <p className="text-[11px] text-neutral-400 mt-1 max-w-xs mx-auto leading-normal">
  You are temporarily excluded from the pairing pool. Toggle active pairing back on to participate in the next round.
  </p>
- </div>
+ </Card>
  ) : !pairedName ? (
- <div className={`p-12 text-center glass-card rounded-2xl border ${
- highContrast ?'border-black' :'border-border-color'
-}`}>
+ <Card className={`p-12 text-center glass-card bg-transparent border-transparent shadow-none rounded-2xl`}>
  <Coffee className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
  <p className="text-xs font-semibold text-neutral-700">No active pairing found</p>
  <p className="text-[11px] text-neutral-400 mt-1 mb-5">Wait until the next matching cycle on Monday to receive a partner!</p>
 
- <button
+ <Button
+ variant="outline"
  onClick={handleRerollPairing}
  disabled={loading}
- className="mx-auto py-2 px-6 rounded-xl text-xs font-semibold bg-white hover:bg-neutral-50 text-neutral-600 flex items-center justify-center gap-1.5 border border-neutral-200 transition focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
+ className="mx-auto gap-1.5"
  >
  <RefreshCw className={`h-4 w-4 ${loading ?'animate-spin' :''}`} />
  <span>{loading ? 'Generating...' : 'Simulate Match'}</span>
- </button>
- </div>
+ </Button>
+ </Card>
  ) : (
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
  {/* Paired Colleague details */}
- <div className={`p-6 glass-card rounded-2xl border flex flex-col justify-between items-center text-center md:col-span-1 ${
- highContrast ?'border-black' :'border-border-color'
-}`}>
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl flex flex-col justify-between items-center text-center md:col-span-1`}>
  <div className="space-y-4 w-full">
  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
  Your Current Pairing
@@ -244,21 +235,22 @@ export default function CoffeeRoulette() {
  </div>
 
  {/* Actions */}
- <div className="w-full space-y-2 mt-6">
- <button
+ <div className="w-full mt-6">
+ <Button
+ variant="outline"
  onClick={handleRerollPairing}
  disabled={loading}
- className="w-full py-2 rounded-xl text-xs font-semibold hover:bg-neutral-50 text-neutral-500 flex items-center justify-center gap-1.5 border border-border-color transition focus:outline-none focus:ring-2 focus:ring-teal-500"
+ className="w-full gap-1.5 text-neutral-500"
  >
  <RefreshCw className={`h-4 w-4 ${loading ?'animate-spin' :''}`} />
  <span>Re-roll Match</span>
- </button>
+ </Button>
  </div>
- </div>
+ </Card>
 
  {/* Mini-Chat Interface */}
- <div className={`p-6 glass-card rounded-2xl border md:col-span-2 flex flex-col ${
- highContrast ?'border-black text-black' :'border-border-color'
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl md:col-span-2 flex flex-col ${
+ highContrast ? 'text-black' : ''
  }`}>
  <div className="flex items-center gap-2 mb-4">
  <MessageCircle className="h-4.5 w-4.5 text-teal-600" />
@@ -275,7 +267,7 @@ export default function CoffeeRoulette() {
  </p>
  <div className="flex flex-wrap justify-center gap-2">
  {CONVERSATION_STARTERS.map((starter, idx) => (
- <button 
+ <button
  key={idx}
  onClick={() => handleSendMessage(starter)}
  className={`px-3 py-1.5 rounded-full text-[10px] font-semibold transition ${highContrast ? 'border border-black hover:bg-black hover:text-white' : 'bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 shadow-sm'}`}
@@ -306,31 +298,28 @@ export default function CoffeeRoulette() {
 
  {chatStage === 'ready_to_call' && (
  <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4 pb-2 animate-fade-in">
- <button
+ <Button
+ variant="outline"
  onClick={handleScheduleChat}
  disabled={loading}
- className={`py-2 px-5 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition focus:outline-none shadow-md ${
+ className={`rounded-full gap-2 shadow-md ${
  highContrast
- ?'bg-white text-black border-2 border-black hover:bg-neutral-100'
- :'bg-white border border-teal-600 text-teal-700 hover:bg-teal-50'
+ ?'border-2 border-black'
+ :'border-teal-600 text-teal-700 hover:bg-teal-50'
  }`}
  >
  <Calendar className="h-4 w-4" />
  <span>{loading ?'Scheduling...' :'Propose Video Call'}</span>
- </button>
+ </Button>
 
- <button
+ <Button
  onClick={handleScheduleChat}
  disabled={loading}
- className={`py-2 px-5 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition focus:outline-none shadow-md ${
- highContrast
- ?'bg-black text-white hover:bg-neutral-800'
- :'bg-teal-600 hover:bg-teal-700 text-white'
- }`}
+ className="rounded-full gap-2 shadow-md"
  >
  <Coffee className="h-4 w-4" />
  <span>{loading ?'Scheduling...' :'Schedule Meetup'}</span>
- </button>
+ </Button>
  </div>
  )}
 
@@ -353,22 +342,22 @@ export default function CoffeeRoulette() {
 
  {/* Input Area */}
  <div className="flex gap-2">
- <input 
- type="text" 
+ <Input
+ type="text"
  value={chatInput}
  onChange={(e) => setChatInput(e.target.value)}
  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(chatInput)}
  placeholder="Type a message..."
- className={`flex-1 text-xs px-3 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ? 'border-black' : 'border-neutral-200'}`}
+ className="flex-1 text-xs"
  />
- <button 
+ <Button
+ size="icon"
  onClick={() => handleSendMessage(chatInput)}
- className={`p-2 rounded-xl transition ${highContrast ? 'bg-black text-white hover:bg-neutral-800' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'}`}
  >
  <Send className="h-4 w-4" />
- </button>
+ </Button>
  </div>
- </div>
+ </Card>
  </div>
  )}
  </div>
