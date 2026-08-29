@@ -6,7 +6,7 @@ existing system to extend, not replace.
 - Font: Inter (primary), OpenDyslexic (accessibility override via
   `.font-dyslexic`).
 - Base palette: background `#f4f6f8`, foreground `#1c252e`, card background
-  `rgba(255,255,255,0.6)` (glass effect), border `rgba(255,255,255,0.5)`.
+  `#ffffff` (opaque), border `#dcdcd6`.
 - Category colors, each with a background/border/text triad:
   - Sage: `#EAEFE9` / `#C3D2C1` / `#2F4F2F`
   - Cerulean: `#E8F1F5` / `#BDD4E2` / `#1D3B51`
@@ -23,4 +23,6 @@ existing system to extend, not replace.
 - No new font family without an accessibility-mode equivalent, matching the
   Inter/OpenDyslexic pairing already in place.
 - Card surfaces use the existing `glass-card` / `bg-card-bg` pattern for
-  visual consistency across dashboards.
+  visual consistency across dashboards: opaque white background, a
+  hairline border, and a single soft flat shadow — no transparency, blur,
+  or hover motion.
