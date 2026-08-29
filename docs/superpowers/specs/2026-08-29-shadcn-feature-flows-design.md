@@ -147,8 +147,18 @@ planned one at a time as prior ones land.
 ### 3. `/coffee` — Coffee Roulette
 - `app/coffee/page.tsx` (currently 5 lines, same thin-wrapper shape as
   `/privacy`) — unchanged structurally.
-- `app/components/CoffeeRoulette.tsx` (376 lines) — refactor match display
-  onto shadcn `Card`; accept/decline/request actions onto shadcn `Button`.
+- **Corrected during implementation planning:** this section originally
+  said "accept/decline/request actions onto shadcn `Button`" — there's no
+  accept/decline flow in this file; the actual actions are Simulate Match,
+  Re-roll Match, chat send, and the Propose Video Call / Schedule Meetup
+  pair. `Card`/`Button` still apply, just not for that reason.
+  `app/components/CoffeeRoulette.tsx` (377 lines) — refactor its five
+  `glass-card` panels onto shadcn `Card`; its buttons onto shadcn `Button`;
+  the hand-built pause/unpause toggle onto shadcn `Switch` (not previously
+  listed); the chat message box onto shadcn `Input`. No `Dialog` — unlike
+  `/privacy` and `/settings`, this file has no hand-built modal.
+- `app/components/ui/switch.tsx` **(new, via shadcn CLI)** — `input.tsx`
+  already exists from `/settings`.
 
 ### 4. `/inbox` — Direct Messages
 - `app/inbox/page.tsx` (361 lines) — **resolved:** unlike the other five
