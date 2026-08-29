@@ -191,9 +191,19 @@ planned one at a time as prior ones land.
 ### 6. `/support` — Support Circles
 - `app/support/page.tsx` (currently 5 lines, same thin-wrapper shape as
   `/privacy`) — unchanged structurally.
-- `app/components/SupportCircles.tsx` (612 lines) — refactor circle cards
-  onto shadcn `Card`; join/leave actions onto shadcn `Button`; join flow onto
-  shadcn `Dialog` if it currently requires confirmation.
+- **Corrected during implementation planning:** this section only
+  mentioned one modal ("join flow"), but the file actually has two
+  hand-built modals — a Discover Circles modal (the join flow) and a
+  completely separate Create Circle modal, using a different, more
+  manual two-div overlay technique. Both become `Dialog`. There's no
+  "leave" action anywhere in this file (joining is one-way — circles
+  can be joined but not left from the UI). `app/components/
+  SupportCircles.tsx` (612 lines) — refactor the layout wrapper and
+  empty states onto shadcn `Card`; the sidebar circle-list rows, all
+  action buttons, and both modals' buttons onto shadcn `Button`; the
+  anonymous-post toggle onto shadcn `Switch`; text fields onto shadcn
+  `Input`. No new shadcn components needed — everything was already
+  installed from earlier routes.
 
 ## Explicitly Out of Scope (this spec)
 
