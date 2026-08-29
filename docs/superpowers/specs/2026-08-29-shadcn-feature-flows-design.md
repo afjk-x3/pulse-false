@@ -35,12 +35,19 @@ out of scope here — they get their own spec once this slice proves the pattern
    accent and glass-card look, in `app/globals.css`. shadcn components then
    render on-brand automatically, with zero per-component overrides needed
    for the common case.
-3. **Data fetching: page-level RSC.** Each route's `page.tsx` becomes (or
-   stays) a Server Component that fetches initial data via the Supabase
-   server client and passes it as props into a client component that owns
-   interactivity. We do not push RSC fetching further down the tree in this
-   slice — one fetch boundary per route keeps the migration mechanical and
-   reviewable.
+3. **Data fetching: unchanged (client-side), by necessity.** RSC fetching was
+   considered but is blocked: this app has no cookie-based Supabase session
+   (only `@supabase/supabase-js` with `localStorage` persistence is
+   installed — no `@supabase/ssr`, no `middleware.ts`), so a Server
+   Component has no way to read the current user's session. Making RSC work
+   would require migrating the whole app to cookie-based auth, an app-wide,
+   security-relevant change out of proportion to a styling migration. Every
+   `page.tsx` in this slice stays (or becomes, where currently inlined) a
+   thin `'use client'` route file that renders the existing top-level
+   feature component, which continues to fetch via `useEffect` and the
+   browser Supabase client exactly as it does today. Cookie-based auth +
+   RSC fetching is deferred to its own future phase, to be scoped and
+   approved separately.
 4. **Accessibility: consume, don't duplicate.** shadcn components must read
    `useAccessibility()` (`app/context/AccessibilityContext.tsx`) for font
    scale, high contrast, and dyslexic font, the same way existing components
@@ -78,59 +85,68 @@ out of scope here — they get their own spec once this slice proves the pattern
 
 ## Route-by-Route Scope
 
-Each route follows the same shape: `page.tsx` fetches via Supabase server
-client and passes props to the existing top-level client component, which is
-refactored in place to compose shadcn primitives instead of hand-built
-markup. Component file names below are existing files being edited, not new
-files, unless marked **(new)**.
+Each route keeps its current `'use client'` data-fetching exactly as-is (see
+Decision 3) — only presentation markup changes, swapping hand-built Tailwind
+for shadcn primitives. Component file names below are existing files being
+edited, not new files, unless marked **(new)**.
+
+**Implementation sequencing:** this spec is implemented as a separate plan
+per route (plus one setup pass), not one combined plan — each plan produces
+independently testable, shippable software, and the pattern proven on the
+first route informs the rest. The first plan covers Setup + `/privacy`
+(smallest route, and its Dialog/Button/Card/Progress usage exercises most of
+the primitives the other five routes also need). Subsequent routes are
+planned one at a time as prior ones land.
 
 ### 1. `/privacy` — Privacy Center
-- `app/privacy/page.tsx` — Server Component: fetch deletion status, export
-  readiness state.
-- `app/components/PrivacyCenter.tsx` — refactor deletion-review flow onto
-  shadcn `Dialog`; action triggers onto shadcn `Button`.
+- `app/privacy/page.tsx` (currently 5 lines: `'use client'` wrapper
+  rendering `<PrivacyCenter />`) — unchanged structurally, stays as the thin
+  client wrapper.
+- `app/components/PrivacyCenter.tsx` (320 lines) — refactor deletion-review
+  flow onto shadcn `Dialog`; action triggers onto shadcn `Button`.
 - `app/components/ui/dialog.tsx`, `button.tsx`, `card.tsx`, `progress.tsx`
   **(new, via shadcn CLI)** — export-progress indicator uses `Progress`.
 
 ### 2. `/settings` — Settings View
-- `app/settings/page.tsx` — Server Component: fetch user profile +
-  accessibility prefs.
-- `app/components/SettingsView.tsx` — refactor form controls onto shadcn
-  `Form` (or plain controlled shadcn inputs, decided during implementation
-  planning if `react-hook-form` is not otherwise needed), `Select` for font
-  scale, `RadioGroup` for nudge style, `Checkbox` for contrast toggle,
-  `Slider` for TTS speed/pitch.
+- `app/settings/page.tsx` (currently 9 lines: `'use client'` wrapper reading
+  `AuthContext` and rendering `<SettingsView currentUser={...} onUserUpdated={...} />`)
+  — unchanged structurally.
+- `app/components/SettingsView.tsx` (396 lines) — refactor form controls
+  onto shadcn `Form` (or plain controlled shadcn inputs, decided during
+  implementation planning if `react-hook-form` is not otherwise needed),
+  `Select` for font scale, `RadioGroup` for nudge style, `Checkbox` for
+  contrast toggle, `Slider` for TTS speed/pitch.
 - `app/components/ui/select.tsx`, `radio-group.tsx`, `checkbox.tsx`,
   `slider.tsx`, `form.tsx` **(new, via shadcn CLI)**.
 
 ### 3. `/coffee` — Coffee Roulette
-- `app/coffee/page.tsx` — Server Component: fetch match history, current
-  match status.
-- `app/components/CoffeeRoulette.tsx` — refactor match display onto shadcn
-  `Card`; accept/decline/request actions onto shadcn `Button`.
+- `app/coffee/page.tsx` (currently 5 lines, same thin-wrapper shape as
+  `/privacy`) — unchanged structurally.
+- `app/components/CoffeeRoulette.tsx` (376 lines) — refactor match display
+  onto shadcn `Card`; accept/decline/request actions onto shadcn `Button`.
 
 ### 4. `/inbox` — Direct Messages
-- `app/inbox/page.tsx` — Server Component: fetch message threads.
-- Message-list component under `app/components/` (current inbox rendering
-  logic — confirm exact file during planning; it is not one of the 22 named
-  components in the audit and may currently live inline in `page.tsx`)
-  refactored onto shadcn list/card patterns for message items, `Input` +
-  `Button` for compose.
+- `app/inbox/page.tsx` (361 lines) — **resolved:** unlike the other five
+  routes, `/inbox` has no separate feature component; all state, Supabase
+  queries (contacts, messages, realtime subscription), and markup live
+  directly in `page.tsx`. The migration touches this one file: contact list
+  and message bubbles onto shadcn `Card`/list patterns, compose bar onto
+  shadcn `Input` + `Button`.
 - **Explicitly not touched:** `Header.tsx`'s notification bell/dropdown —
   that belongs to the shared-layout slice (Phase 7b), not this one.
 
 ### 5. `/kudos` — Kudos Feed
-- `app/kudos/page.tsx` — Server Component: fetch kudos posts + user's kudos
-  count.
-- `app/components/KudosFeed.tsx` — refactor post cards onto shadcn `Card`;
-  post-creation flow onto shadcn `Dialog` + `Button`.
+- `app/kudos/page.tsx` (currently 5 lines, same thin-wrapper shape as
+  `/privacy`) — unchanged structurally.
+- `app/components/KudosFeed.tsx` (540 lines) — refactor post cards onto
+  shadcn `Card`; post-creation flow onto shadcn `Dialog` + `Button`.
 
 ### 6. `/support` — Support Circles
-- `app/support/page.tsx` — Server Component: fetch circles + membership
-  status.
-- `app/components/SupportCircles.tsx` — refactor circle cards onto shadcn
-  `Card`; join/leave actions onto shadcn `Button`; join flow onto shadcn
-  `Dialog` if it currently requires confirmation.
+- `app/support/page.tsx` (currently 5 lines, same thin-wrapper shape as
+  `/privacy`) — unchanged structurally.
+- `app/components/SupportCircles.tsx` (612 lines) — refactor circle cards
+  onto shadcn `Card`; join/leave actions onto shadcn `Button`; join flow onto
+  shadcn `Dialog` if it currently requires confirmation.
 
 ## Explicitly Out of Scope (this spec)
 
@@ -163,9 +179,6 @@ files, unless marked **(new)**.
 
 ## Open Questions For Implementation Planning
 
-- Exact component file(s) backing `/inbox`'s message list (not enumerated in
-  the original audit's 22-component list) — resolve by reading
-  `app/inbox/page.tsx` before planning that route.
 - Whether `react-hook-form` is worth adding for `/settings`'s form, or plain
   controlled shadcn inputs are simpler given the small number of fields.
 - shadcn style variant (New York vs. Default) — either works with token
