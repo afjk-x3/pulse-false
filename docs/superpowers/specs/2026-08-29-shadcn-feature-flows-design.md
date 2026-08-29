@@ -128,13 +128,21 @@ planned one at a time as prior ones land.
 - `app/settings/page.tsx` (currently 9 lines: `'use client'` wrapper reading
   `AuthContext` and rendering `<SettingsView currentUser={...} onUserUpdated={...} />`)
   — unchanged structurally.
-- `app/components/SettingsView.tsx` (396 lines) — refactor form controls
-  onto shadcn `Form` (or plain controlled shadcn inputs, decided during
-  implementation planning if `react-hook-form` is not otherwise needed),
-  `Select` for font scale, `RadioGroup` for nudge style, `Checkbox` for
-  contrast toggle, `Slider` for TTS speed/pitch.
-- `app/components/ui/select.tsx`, `radio-group.tsx`, `checkbox.tsx`,
-  `slider.tsx`, `form.tsx` **(new, via shadcn CLI)**.
+- **Corrected during implementation planning:** this section originally
+  described font-scale/nudge-style/contrast/TTS controls (`Select`,
+  `RadioGroup`, `Checkbox`, `Slider` for those specifically) as living in
+  `SettingsView.tsx`. They don't — that's `Header.tsx`'s "Accessibility
+  Hub" dropdown, which the Explicitly Out of Scope section below already
+  defers to Phase 7b. `SettingsView.tsx` (396 lines) is actually a plain
+  personal-profile form: name/email/phone/address/working-hours/password
+  fields plus an avatar upload-and-crop modal. The real migration: form
+  fields onto shadcn `Input` (plain controlled state, no `Form` /
+  `react-hook-form` — the existing 7-field controlled pattern already
+  fits, same as `/privacy`); submit button, avatar-preset buttons, and the
+  crop modal's Cancel/Apply onto shadcn `Button`; the hand-built crop
+  modal onto shadcn `Dialog`; the crop modal's zoom control onto shadcn
+  `Slider` (the one place `Slider` genuinely applies in this file).
+- `app/components/ui/input.tsx`, `slider.tsx` **(new, via shadcn CLI)**.
 
 ### 3. `/coffee` — Coffee Roulette
 - `app/coffee/page.tsx` (currently 5 lines, same thin-wrapper shape as
@@ -196,8 +204,11 @@ planned one at a time as prior ones land.
 
 ## Open Questions For Implementation Planning
 
-- Whether `react-hook-form` is worth adding for `/settings`'s form, or plain
-  controlled shadcn inputs are simpler given the small number of fields.
-- shadcn style variant (New York vs. Default) — either works with token
-  retargeting; pick one at `init` time and keep it consistent for all
-  subsequent `add` commands.
+Both resolved during implementation:
+
+- ~~Whether `react-hook-form` is worth adding for `/settings`'s form~~ —
+  resolved no; plain controlled shadcn `Input`, matching `/privacy`.
+- ~~shadcn style variant (New York vs. Default)~~ — moot: the installed
+  shadcn CLI (v4.19.0) doesn't have that concept at all. It uses a
+  `--base radix -p vega` init flow instead (documented in the Setup task's
+  implementation report).
