@@ -296,7 +296,7 @@ export default function PrivacyCenter() {
  size="sm"
  onClick={handlePurgeData}
  disabled={isPurging}
- className="gap-1.5"
+ className="gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90"
  >
  <Trash2 className="h-4 w-4" />
  <span>{isPurging ? 'Submitting...' : 'Delete All Data'}</span>
