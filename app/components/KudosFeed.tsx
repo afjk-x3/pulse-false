@@ -1,10 +1,29 @@
 'use client';
 
 import React, { useState, useEffect} from'react';
-import { Award, Search, Heart, Plus, Send, X} from'lucide-react';
+import { Award, Search, Heart, Plus, Send, ChevronsUpDown} from'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { Database} from'../lib/database.types';
 import { useAccessibility} from'../context/AccessibilityContext';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from './ui/command';
 
 type KudosPost = Database['public']['Tables']['kudos_posts']['Row'];
 
@@ -16,7 +35,7 @@ interface KudosWithProfiles extends KudosPost {
 }
 
 const RESTRICTED_WORDS = [
-'fuck','shit','bitch','asshole','dick','cunt','bastard', 
+'fuck','shit','bitch','asshole','dick','cunt','bastard',
 'slut','whore','faggot','nigger','crap','piss'
 ];
 
@@ -36,7 +55,7 @@ export default function KudosFeed() {
  const [profiles, setProfiles] = useState<Record<string, { name: string, role: string}>>({});
  const [searchQuery, setSearchQuery] = useState('');
  const [activeFilter, setActiveFilter] = useState<string>('All');
- 
+
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +121,7 @@ export default function KudosFeed() {
  .from('kudos_posts')
  .select('*')
  .order('created_at', { ascending: false});
- 
+
  if (fetchErr) throw fetchErr;
 
  const mapped = (kudosData || []).map(k => {
@@ -158,7 +177,7 @@ export default function KudosFeed() {
 
  const finalCategory = category ==='Other' ? (customCategory.trim() ||'Other') : category;
  const finalMessage = `ANON:${senderName.trim()}|${message.trim()}`;
- 
+
  setIsSubmitting(true);
  try {
  await supabase.from('kudos_posts').insert({
@@ -168,7 +187,7 @@ export default function KudosFeed() {
  category: finalCategory as any, // Cast to enum
  likes_count: 0
 });
- 
+
  setRecipient('');
  setRecipientSearch('');
  setMessage('');
@@ -178,7 +197,7 @@ export default function KudosFeed() {
  setIsComposerOpen(false);
  setSuccessNotification(true);
  setTimeout(() => setSuccessNotification(false), 3000);
- 
+
  // Explicitly fetch latest kudos
  await fetchKudos(profiles);
 } catch (err) {
@@ -191,7 +210,7 @@ export default function KudosFeed() {
 
  const getCategoryColor = (cat: string) => {
  if (highContrast) return'border-black text-black font-bold';
- 
+
  switch (cat) {
  case'Collaboration':
  return'bg-blue-50 text-blue-700 border-blue-100';
@@ -207,13 +226,17 @@ export default function KudosFeed() {
 };
 
  const filteredKudos = kudosList.filter((k) => {
- const matchesSearch = k.recipient_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+ const matchesSearch = k.recipient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
  k.sender_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
  k.message.toLowerCase().includes(searchQuery.toLowerCase());
- 
+
  const matchesFilter = activeFilter ==='All' || k.category === activeFilter;
  return matchesSearch && matchesFilter;
 });
+
+ const eligibleRecipients = Object.entries(profiles).filter(
+ ([id, profile]) => id !== currentUser?.id && profile.role !=='admin'
+ );
 
  return (
  <div className="space-y-6">
@@ -221,30 +244,24 @@ export default function KudosFeed() {
  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
  {/* Search Input */}
  <div className="relative w-full sm:max-w-md">
- <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-neutral-400" />
- <input
+ <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-neutral-400 z-10" />
+ <Input
  type="text"
  placeholder="Search by name, sender, or keyword..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className={`w-full pl-10 pr-4 py-2.5 rounded-xl border glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs font-semibold ${
- highContrast ?'border-black' :'border-border-color'
-}`}
+ className="pl-10 text-xs font-semibold"
  />
  </div>
 
  {/* Compose trigger button */}
- <button
+ <Button
  onClick={() => setIsComposerOpen(true)}
- className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
- highContrast
- ?'bg-black text-white hover:bg-neutral-800 border-2 border-black'
- :'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
-}`}
+ className="w-full sm:w-auto gap-2"
  >
  <Plus className="h-4.5 w-4.5" />
  <span>Send Kudos Note</span>
- </button>
+ </Button>
  </div>
 
  {/* Category Filter Pills */}
@@ -257,17 +274,18 @@ export default function KudosFeed() {
 }
 });
  return filterCategories.map((filter) => (
- <button
+ <Button
  key={filter}
+ variant="outline"
  onClick={() => setActiveFilter(filter)}
- className={`py-1.5 px-3.5 rounded-full text-xs font-semibold shrink-0 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+ className={`h-auto rounded-full py-1.5 px-3.5 text-xs font-semibold shrink-0 ${
  activeFilter === filter
- ? (highContrast ?'bg-black text-white' :'bg-teal-50 text-teal-800 border border-teal-200 font-bold')
- :'glass-card hover:bg-neutral-50 text-neutral-500 border border-neutral-100'
+ ? (highContrast ?'bg-black hover:bg-black text-white border-black' :'bg-teal-50 hover:bg-teal-50 text-teal-800 border-teal-200 font-bold')
+ :'glass-card hover:bg-neutral-50 text-neutral-500 border-neutral-100'
 }`}
  >
  {filter}
- </button>
+ </Button>
  ));
 })()}
  </div>
@@ -290,9 +308,7 @@ export default function KudosFeed() {
  ) : error ? (
  <div className="p-12 text-center text-xs text-red-500">{error}</div>
  ) : filteredKudos.length === 0 ? (
- <div className={`py-16 px-6 text-center glass-card rounded-2xl border ${
- highContrast ?'border-black' :'border-border-color'
-}`}>
+ <Card className="py-16 px-6 text-center glass-card bg-transparent border-transparent shadow-none rounded-2xl">
  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4 border border-amber-100">
  <Award className="h-6 w-6 text-amber-500" />
  </div>
@@ -300,14 +316,14 @@ export default function KudosFeed() {
  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm mx-auto leading-relaxed">
  Take a moment to recognize a teammate whose hard work made your day easier. Your appreciation means more than you think.
  </p>
- </div>
+ </Card>
  ) : (
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  {filteredKudos.map((kudos) => (
- <article
+ <Card
  key={kudos.id}
- className={`p-5 glass-card rounded-2xl border flex flex-col justify-between transition-all duration-200 hover:shadow-md ${
- highContrast ?'border-black text-black' :'border-border-color'
+ className={`p-5 glass-card bg-transparent border-transparent shadow-none rounded-2xl flex flex-col justify-between transition-all duration-200 hover:shadow-md ${
+ highContrast ? 'text-black' : ''
 }`}
  >
  <div className="space-y-3">
@@ -340,8 +356,8 @@ export default function KudosFeed() {
  aria-label={`Like this kudos. Current likes: ${kudos.likes_count}`}
  >
  <Heart className={`h-3.5 w-3.5 ${
- likedPosts.has(kudos.id) 
- ?'fill-teal-600 text-teal-600' 
+ likedPosts.has(kudos.id)
+ ?'fill-teal-600 text-teal-600'
  :'text-neutral-400 hover:text-teal-600 hover:fill-teal-600'
 }`} />
  <span className={likedPosts.has(kudos.id) ?'text-teal-700 font-bold' :''}>
@@ -349,41 +365,23 @@ export default function KudosFeed() {
  </span>
  </button>
  </div>
- </article>
+ </Card>
  ))}
  </div>
  )}
 
- {/* Kudos Composer Modal Overlay */}
- {isComposerOpen && (
- <div
- className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/40 backdrop-blur-xs animate-fade-in"
- role="dialog"
- aria-modal="true"
- aria-labelledby="composer-title"
- >
- <div className={`w-full max-w-lg p-6 bg-white rounded-2xl border shadow-2xl space-y-4 animate-scale-up ${
- highContrast ?'border-black text-black' :'border-neutral-150'
-}`}>
- <div className="flex items-center justify-between border-b pb-3 mb-4">
+ {/* Kudos Composer */}
+ <Dialog open={isComposerOpen} onOpenChange={setIsComposerOpen}>
+ <DialogContent className={`sm:max-w-lg ${highContrast ? 'text-black' : ''}`}>
+ <DialogHeader>
  <div className="flex items-center gap-2">
  <Award className="h-5 w-5 text-teal-600" />
- <h3 id="composer-title" className="font-bold text-neutral-800">Compose Kudos Recognition</h3>
+ <DialogTitle className="text-neutral-800">Compose Kudos Recognition</DialogTitle>
  </div>
- <button 
- onClick={() => {
- setIsComposerOpen(false);
- setComposerError(null);
-}}
- className="p-1 rounded hover:bg-neutral-100"
- aria-label="Close form"
- >
- <X className="h-4 w-4" />
- </button>
- </div>
+ </DialogHeader>
 
  {composerError && (
- <div className="bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold p-3 rounded-lg flex items-center mb-4 animate-fade-in">
+ <div className="bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold p-3 rounded-lg flex items-center animate-fade-in">
  ⚠️ {composerError}
  </div>
  )}
@@ -393,47 +391,51 @@ export default function KudosFeed() {
  <label htmlFor="kudos-recipient" className="block text-xs font-bold text-neutral-700 mb-1">
  Recipient Name *
  </label>
- <div className="relative">
- <input
+ <Popover open={showRecipientDropdown} onOpenChange={setShowRecipientDropdown}>
+ <PopoverTrigger asChild>
+ <Button
  id="kudos-recipient"
- type="text"
- required
- placeholder="Start typing a name..."
+ type="button"
+ variant="outline"
+ role="combobox"
+ aria-expanded={showRecipientDropdown}
+ className="w-full justify-between font-semibold text-xs"
+ >
+ <span className={recipient ? '' : 'text-neutral-400 font-normal'}>
+ {recipient ? recipientSearch : 'Start typing a name...'}
+ </span>
+ <ChevronsUpDown className="opacity-50 h-4 w-4" />
+ </Button>
+ </PopoverTrigger>
+ <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+ <Command>
+ <CommandInput
+ placeholder="Search colleagues..."
  value={recipientSearch}
- onChange={(e) => {
- setRecipientSearch(e.target.value);
- setRecipient(''); 
- setShowRecipientDropdown(true);
-}}
- onFocus={() => setShowRecipientDropdown(true)}
- onBlur={() => setTimeout(() => setShowRecipientDropdown(false), 200)}
- className={`w-full p-2.5 rounded-lg border text-xs bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
- highContrast ?'border-black' :'border-border-color'
-}`}
+ onValueChange={(value) => {
+ setRecipientSearch(value);
+ setRecipient('');
+ }}
  />
- {showRecipientDropdown && recipientSearch && (
- <ul className="absolute z-10 w-full mt-1 bg-white border border-border-color rounded-lg shadow-lg max-h-48 overflow-y-auto">
- {Object.entries(profiles)
- .filter(([id, profile]) => id !== currentUser?.id && profile.role !=='admin' && profile.name.toLowerCase().includes(recipientSearch.toLowerCase()))
- .map(([id, profile]) => (
- <li
+ <CommandList>
+ <CommandEmpty>No colleagues found</CommandEmpty>
+ {eligibleRecipients.map(([id, profile]) => (
+ <CommandItem
  key={id}
- className="px-4 py-2 text-xs font-semibold hover:bg-teal-50 cursor-pointer"
- onMouseDown={() => {
+ value={profile.name}
+ onSelect={() => {
  setRecipient(id);
  setRecipientSearch(profile.name);
  setShowRecipientDropdown(false);
 }}
  >
  {profile.name}
- </li>
+ </CommandItem>
  ))}
- {Object.entries(profiles).filter(([id, profile]) => id !== currentUser?.id && profile.role !=='admin' && profile.name.toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
- <li className="px-4 py-2 text-xs text-neutral-500 italic">No colleagues found</li>
- )}
- </ul>
- )}
- </div>
+ </CommandList>
+ </Command>
+ </PopoverContent>
+ </Popover>
  </div>
 
  <div className="grid grid-cols-2 gap-4">
@@ -441,39 +443,38 @@ export default function KudosFeed() {
  <label htmlFor="kudos-category" className="block text-xs font-bold text-neutral-700 mb-1">
  Recognition Category
  </label>
- <select
- id="kudos-category"
+ <Select
  value={category}
- onChange={(e) => {
- setCategory(e.target.value);
- if (e.target.value !=='Other') {
+ onValueChange={(value) => {
+ setCategory(value);
+ if (value !=='Other') {
  setCustomCategory('');
 }
 }}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
- highContrast ?'border-black' :'border-border-color'
-}`}
  >
- <option value="Gratitude">Gratitude</option>
- <option value="Collaboration">Collaboration</option>
- <option value="Inspiration">Inspiration</option>
- <option value="Impact">Impact</option>
- <option value="Other">Other - Please specify</option>
- </select>
+ <SelectTrigger id="kudos-category" className="w-full text-xs font-semibold">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="Gratitude">Gratitude</SelectItem>
+ <SelectItem value="Collaboration">Collaboration</SelectItem>
+ <SelectItem value="Inspiration">Inspiration</SelectItem>
+ <SelectItem value="Impact">Impact</SelectItem>
+ <SelectItem value="Other">Other - Please specify</SelectItem>
+ </SelectContent>
+ </Select>
  </div>
  <div>
  <label htmlFor="kudos-sender" className="block text-xs font-bold text-neutral-700 mb-1">
  Your Name (Optional)
  </label>
- <input
+ <Input
  id="kudos-sender"
  type="text"
  placeholder="Leave blank to send anonymously"
  value={senderName}
  onChange={(e) => setSenderName(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
- highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  />
  </div>
  </div>
@@ -483,16 +484,14 @@ export default function KudosFeed() {
  <label htmlFor="kudos-custom-category" className="block text-xs font-bold text-neutral-700 mb-1">
  Custom Category Name *
  </label>
- <input
+ <Input
  id="kudos-custom-category"
  type="text"
  required
  placeholder="e.g. Wellness, Mentorship, Innovation"
  value={customCategory}
  onChange={(e) => setCustomCategory(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${
- highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  />
  </div>
  )}
@@ -501,40 +500,39 @@ export default function KudosFeed() {
  <label htmlFor="kudos-text" className="block text-xs font-bold text-neutral-700 mb-1">
  Appreciation Message *
  </label>
- <textarea
+ <Textarea
  id="kudos-text"
  required
  rows={4}
  placeholder="Explain how this person supported you or the team..."
  value={message}
  onChange={(e) => setMessage(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium ${
- highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-medium"
  />
  </div>
 
  <div className="flex items-center justify-end gap-2 border-t pt-3.5 border-neutral-100">
- <button
+ <Button
  type="button"
+ variant="secondary"
+ size="sm"
  onClick={() => setIsComposerOpen(false)}
- className="px-4 py-2 text-xs font-semibold rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600"
  >
  Cancel
- </button>
- <button
+ </Button>
+ <Button
  type="submit"
+ size="sm"
  disabled={isSubmitting}
- className="px-4 py-2 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 disabled:opacity-60"
+ className="gap-1.5"
  >
  <Send className="h-3.5 w-3.5" />
  <span>{isSubmitting ?'Sending...' :'Send Kudos'}</span>
- </button>
+ </Button>
  </div>
  </form>
- </div>
- </div>
- )}
+ </DialogContent>
+ </Dialog>
  </div>
  );
 }
