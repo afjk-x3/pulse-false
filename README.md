@@ -1,6 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
+TESTING ACCOUNT
+------------------------------------------------
+
+EMPLOYEE: alex.rivera@axionhr.com
+HR:  derek.vance@axionhr.com
+ADMIN:   priya.sharma@axionhr.com
+
+Password:  password123
+
+-------------------------------------------------
 
 First, run the development server:
 
@@ -16,15 +26,7 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-------------------------------------------------
-TESTING ACCOUNT
 
-EMPLOYEE: sam.employee@axiohr.com
-HR:  jordan.manager@axionhr.com
-ADMIN:   alex.rivera@axionhr.com
-
-Password:  password123
--------------------------------------------------
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
