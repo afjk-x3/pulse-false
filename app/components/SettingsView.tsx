@@ -4,9 +4,19 @@ import React, { useState} from'react';
 import { supabase} from'../lib/supabaseClient';
 import { Database} from'../lib/database.types';
 import { useAccessibility} from'../context/AccessibilityContext';
-import { Save, User, ShieldAlert, CheckCircle, Upload, X} from'lucide-react';
+import { Save, User, ShieldAlert, CheckCircle, Upload} from'lucide-react';
 import Cropper from'react-easy-crop';
 import { getCroppedImg} from'../utils/cropImage';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { Input } from './ui/input';
+import { Slider } from './ui/slider';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
@@ -92,8 +102,7 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
 
  return (
  <div className="max-w-3xl mx-auto space-y-6">
- <div className={`p-6 glass-card rounded-2xl border ${highContrast ?'border-black text-black' :'border-border-color'
-}`}>
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl ${highContrast ? 'text-black' : ''}`}>
  <div className="flex items-center gap-3 border-b pb-4 mb-6 border-neutral-100">
  <User className="h-5.5 w-5.5 text-teal-600" />
  <div>
@@ -109,13 +118,12 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-name" className="block text-xs font-bold text-neutral-700 mb-1">
  Full Name <span className="text-red-500">*</span>
  </label>
- <input
+ <Input
  id="settings-name"
  type="text"
  value={name}
  onChange={(e) => setName(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  required
  />
  </div>
@@ -125,11 +133,11 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-email" className="block text-xs font-bold text-neutral-700 mb-1">
  Work Email Address <span className="text-neutral-400 font-normal">(Cannot be edited)</span>
  </label>
- <input
+ <Input
  id="settings-email"
  type="email"
  value={currentUser.email}
- className="w-full p-2.5 rounded-lg border text-xs bg-neutral-50 text-neutral-500 border-border-color cursor-not-allowed font-semibold focus:outline-none"
+ className="text-xs font-semibold bg-neutral-50 text-neutral-500 cursor-not-allowed"
  disabled
  readOnly
  />
@@ -140,14 +148,13 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-phone" className="block text-xs font-bold text-neutral-700 mb-1">
  Phone Number <span className="text-red-500">*</span>
  </label>
- <input
+ <Input
  id="settings-phone"
  type="tel"
  placeholder="e.g. +1 (555) 019-2834"
  value={phone}
  onChange={(e) => setPhone(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  required
  />
  </div>
@@ -157,14 +164,13 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-address" className="block text-xs font-bold text-neutral-700 mb-1">
  Home Address
  </label>
- <input
+ <Input
  id="settings-address"
  type="text"
  placeholder="e.g. 123 Guardian Way, Tech City"
  value={address}
  onChange={(e) => setAddress(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  />
  </div>
 
@@ -173,13 +179,12 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-wh-start" className="block text-xs font-bold text-neutral-700 mb-1">
  My Working Hours (Start)
  </label>
- <input
+ <Input
  id="settings-wh-start"
  type="time"
  value={workingHoursStart}
  onChange={(e) => setWorkingHoursStart(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  required
  />
  </div>
@@ -189,13 +194,12 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-wh-end" className="block text-xs font-bold text-neutral-700 mb-1">
  My Working Hours (End)
  </label>
- <input
+ <Input
  id="settings-wh-end"
  type="time"
  value={workingHoursEnd}
  onChange={(e) => setWorkingHoursEnd(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  required
  />
  </div>
@@ -205,32 +209,15 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <label htmlFor="settings-password" className="block text-xs font-bold text-neutral-700 mb-1">
  New Password <span className="text-neutral-400 font-normal">(Leave blank to keep current)</span>
  </label>
- <input
+ <Input
  id="settings-password"
  type="password"
  placeholder="••••••••"
  value={newPassword}
  onChange={(e) => setNewPassword(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="text-xs font-semibold"
  />
  </div>
- </div>
-
- {/* Address */}
- <div>
- <label htmlFor="settings-address" className="block text-xs font-bold text-neutral-700 mb-1">
- Residential Address
- </label>
- <input
- id="settings-address"
- type="text"
- placeholder="e.g. 123 Elm St, Springfield, IL"
- value={address}
- onChange={(e) => setAddress(e.target.value)}
- className={`w-full p-2.5 rounded-lg border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
- />
  </div>
 
  {/* Profile Image / Avatar Preset Selection */}
@@ -239,10 +226,10 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  <div className="flex flex-wrap gap-2.5 items-center">
  {/* Custom Image Upload */}
  <div className="relative group">
- <input 
- type="file" 
- accept="image/*" 
- className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+ <input
+ type="file"
+ accept="image/*"
+ className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
  onChange={(e) => {
  const file = e.target.files?.[0];
  if (file) {
@@ -259,9 +246,10 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
 }}
  title="Upload custom avatar"
  />
- <button
+ <Button
  type="button"
- className={`h-11 w-11 rounded-full flex items-center justify-center text-xs border transition-all relative overflow-hidden ${
+ variant="outline"
+ className={`h-11 w-11 rounded-full p-0 flex items-center justify-center text-xs relative overflow-hidden ${
  avatar.startsWith('data:image') || avatar.startsWith('http')
  ? (highContrast ?'border-2 border-black ring-2 ring-black' :'border-teal-500 shadow-sm ring-2 ring-teal-200')
  : (highContrast ?'border-black glass-card group-hover:bg-neutral-100' :'border-border-color bg-neutral-50 group-hover:bg-neutral-100 text-neutral-600')
@@ -272,23 +260,24 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  ) : (
  <Upload className="w-5 h-5 text-neutral-500" />
  )}
- </button>
+ </Button>
  </div>
 
  <div className="h-6 w-px bg-neutral-200 mx-1"></div>
 
  {avatarPresets.map((preset) => (
- <button
+ <Button
  key={preset}
  type="button"
+ variant="outline"
  onClick={() => setAvatar(preset)}
- className={`h-11 w-11 rounded-full flex items-center justify-center text-xs font-extrabold border transition-all ${avatar === preset
+ className={`h-11 w-11 rounded-full p-0 text-xs font-extrabold ${avatar === preset
  ? (highContrast ?'border-2 border-black bg-neutral-900 text-white' :'border-teal-500 bg-teal-50 text-teal-700 shadow-sm ring-2 ring-teal-200')
  : (highContrast ?'border-black glass-card hover:bg-neutral-100' :'border-border-color bg-neutral-50 hover:bg-neutral-100 text-neutral-600')
 }`}
  >
  {preset}
- </button>
+ </Button>
  ))}
  </div>
  </div>
@@ -308,32 +297,23 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  )}
 
  <div className="border-t pt-4 flex justify-end">
- <button
- type="submit"
- disabled={isLoading}
- className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-60 disabled:cursor-not-allowed ${highContrast
- ?'bg-black text-white hover:bg-neutral-800'
- :'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-}`}
- >
+ <Button type="submit" disabled={isLoading} className="gap-1.5">
  <Save className="h-4 w-4" />
  <span>{isLoading ?'Saving...' :'Save Changes'}</span>
- </button>
+ </Button>
  </div>
  </form>
- </div>
+ </Card>
 
- {/* Crop Modal Overlay */}
- {isCropModalOpen && imageToCrop && (
- <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
- <div className="bg-white border border-neutral-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-scale-up">
- <div className="p-4 border-b border-neutral-100 flex justify-between items-center">
- <h3 className="font-bold text-neutral-800 text-sm">Crop Avatar Image</h3>
- <button onClick={() => setIsCropModalOpen(false)} className="text-neutral-400 hover:text-black transition">
- <X className="w-5 h-5" />
- </button>
- </div>
- 
+ {/* Crop Modal */}
+ <Dialog open={isCropModalOpen} onOpenChange={setIsCropModalOpen}>
+ <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+ <DialogHeader className="p-4 border-b border-neutral-100">
+ <DialogTitle className="text-sm">Crop Avatar Image</DialogTitle>
+ </DialogHeader>
+
+ {imageToCrop && (
+ <>
  <div className="relative w-full h-[320px] bg-teal-900 overflow-hidden">
  <Cropper
  image={imageToCrop}
@@ -347,30 +327,31 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  onZoomChange={setZoom}
  />
  </div>
- 
- <div className="p-5 glass-card flex flex-col gap-5">
+
+ <div className="p-5 flex flex-col gap-5">
  <div className="flex items-center gap-4">
  <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Zoom</span>
- <input
- type="range"
- value={zoom}
+ <Slider
+ value={[zoom]}
  min={1}
  max={3}
  step={0.1}
- onChange={(e) => setZoom(Number(e.target.value))}
- className="flex-1 h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+ onValueChange={(vals) => setZoom(vals[0])}
+ className="flex-1"
  />
  </div>
  <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
- <button
+ <Button
  type="button"
+ variant="secondary"
+ size="sm"
  onClick={() => setIsCropModalOpen(false)}
- className="px-4 py-2.5 text-xs font-bold text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition focus:ring-2 focus:ring-neutral-300 outline-none"
  >
  Cancel
- </button>
- <button
+ </Button>
+ <Button
  type="button"
+ size="sm"
  onClick={async () => {
  try {
  if (croppedAreaPixels) {
@@ -382,15 +363,15 @@ export default function SettingsView({ currentUser, onUserUpdated}: SettingsView
  console.error("Crop error:", e);
 }
 }}
- className="px-5 py-2.5 text-xs font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition focus:ring-2 focus:ring-teal-500 shadow-sm outline-none"
  >
  Apply & Save
- </button>
+ </Button>
  </div>
  </div>
- </div>
- </div>
+ </>
  )}
+ </DialogContent>
+ </Dialog>
  </div>
  );
 }
