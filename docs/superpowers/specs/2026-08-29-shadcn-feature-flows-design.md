@@ -73,10 +73,19 @@ out of scope here — they get their own spec once this slice proves the pattern
     classes across components)
   - `--destructive` → existing rose/red usage
   - `--radius` → match the existing `rounded-2xl` / `rounded-xl` card radius
-  - `--card`, `--border` → map to the existing `--card-bg` / `--border-color`
-    glassmorphism variables so shadcn's `Card` inherits the glass look
-    without modification
+  - `--card` → map to the existing `--card-bg` value so shadcn's flat
+    background color matches; `--border` → map to `--border-color`
   - `--background`, `--foreground` → already defined, reuse as-is
+  - **Card is a partial exception:** the app's `.glass-card` utility class
+    (`app/globals.css`) also carries `backdrop-filter: blur(16px)`, a
+    layered `box-shadow`, and a hover lift transform that shadcn's default
+    `Card` does not have and that pure CSS-variable retargeting cannot
+    reproduce. Rather than fight that gap, shadcn's `Card` component is used
+    for structure (`Card`, `CardHeader`, `CardContent`, etc.) with the
+    existing `glass-card` class layered on via `className`, e.g.
+    `<Card className="glass-card ...">`. This keeps the visual result
+    pixel-identical to today while still gaining shadcn's composition and
+    accessibility behavior.
 - Verify high-contrast mode: confirm the existing `body.high-contrast`
   override block (which already redefines `--background`, `--foreground`,
   `--card-bg`, `--border-color`, and the category triads) also correctly
@@ -102,10 +111,18 @@ planned one at a time as prior ones land.
 - `app/privacy/page.tsx` (currently 5 lines: `'use client'` wrapper
   rendering `<PrivacyCenter />`) — unchanged structurally, stays as the thin
   client wrapper.
-- `app/components/PrivacyCenter.tsx` (320 lines) — refactor deletion-review
-  flow onto shadcn `Dialog`; action triggers onto shadcn `Button`.
-- `app/components/ui/dialog.tsx`, `button.tsx`, `card.tsx`, `progress.tsx`
-  **(new, via shadcn CLI)** — export-progress indicator uses `Progress`.
+- `app/components/PrivacyCenter.tsx` (320 lines) — refactor the custom
+  purge-confirmation modal (a hand-built `role="dialog"` overlay) onto
+  shadcn `Dialog`; the export/delete action buttons and the dialog's
+  cancel/confirm buttons onto shadcn `Button`; the four content sections
+  (intro, k-anonymity explainer, on-device CV explainer, data management)
+  onto shadcn `Card` with the `glass-card` class preserved (see Setup).
+  There is no progress bar in the current export flow — just a disabled
+  button with its label swapped to "Exporting..." — so no `Progress`
+  component is introduced; that behavior carries over unchanged onto
+  `Button`'s `disabled` state.
+- `app/components/ui/dialog.tsx`, `button.tsx`, `card.tsx`
+  **(new, via shadcn CLI)**.
 
 ### 2. `/settings` — Settings View
 - `app/settings/page.tsx` (currently 9 lines: `'use client'` wrapper reading
