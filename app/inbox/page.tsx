@@ -6,6 +6,9 @@ import { AuthContext } from '../components/AppShell';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { Search, Send, ShieldAlert, Clock, Info, UserCircle } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 
 interface Contact {
   id: string;
@@ -32,14 +35,14 @@ export default function InboxPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [interceptionAlert, setInterceptionAlert] = useState<string | null>(null);
-  
+
   const [adminConfigs, setAdminConfigs] = useState<any>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch contacts and admin configs
@@ -52,7 +55,7 @@ export default function InboxPage() {
         .neq('id', currentUser.id)
         .order('full_name');
       if (contactsData) setContacts(contactsData);
-      
+
       const { data: adminData } = await supabase
         .from('admin_configs')
         .select('*')
@@ -65,24 +68,24 @@ export default function InboxPage() {
   // Fetch messages for selected contact
   useEffect(() => {
     if (!currentUser || !selectedContact) return;
-    
+
     const fetchMessages = async () => {
       const { data } = await supabase
         .from('direct_messages')
         .select('*')
         .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${selectedContact.id}),and(sender_id.eq.${selectedContact.id},receiver_id.eq.${currentUser.id})`)
         .order('created_at', { ascending: true });
-        
+
       if (data) setMessages(data);
     };
-    
+
     fetchMessages();
 
     // Subscribe to new messages
     const channel = supabase.channel('direct_messages_updates')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'direct_messages',
         filter: `receiver_id=eq.${currentUser.id}`
       }, (payload) => {
@@ -107,7 +110,7 @@ export default function InboxPage() {
       const options = { timeZone: contact.timezone, hour: '2-digit' as const, minute: '2-digit' as const, hour12: false, weekday: 'short' as const };
       const formatter = new Intl.DateTimeFormat('en-US', options);
       const parts = formatter.formatToParts(new Date());
-      
+
       let currentHour = 0, currentMinute = 0, currentWeekday = '';
       parts.forEach(p => {
         if (p.type === 'hour') currentHour = parseInt(p.value, 10);
@@ -143,20 +146,20 @@ export default function InboxPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageInput.trim() || !selectedContact || !currentUser) return;
-    
+
     setIsSending(true);
     setInterceptionAlert(null);
-    
+
     const content = messageInput.trim();
     setMessageInput('');
-    
+
     // RIGHT TO DISCONNECT INTERCEPTOR
     if (isOffDuty(selectedContact)) {
       // Calculate next 9 AM for recipient (simplified for mock purposes to next day 9AM UTC)
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(9, 0, 0, 0);
-      
+
       const payload = {
         subject: `Direct Message from ${currentUser.full_name}`,
         content: content,
@@ -174,7 +177,7 @@ export default function InboxPage() {
       if (error) {
         console.error("Outbox insert error:", error);
       }
-      
+
       setInterceptionAlert(`Message intercepted! ${selectedContact.full_name.split(' ')[0]} is currently off-duty. Your message has been sent to the Right-to-Disconnect Outbox and will be delivered during their next working shift.`);
       setIsSending(false);
       return;
@@ -186,14 +189,14 @@ export default function InboxPage() {
       receiver_id: selectedContact.id,
       content: content,
     };
-    
+
     const { data, error } = await supabase.from('direct_messages').insert(newMsg).select().single();
     if (error) {
       console.error("Direct message insert error:", error);
     }
     if (data) {
       setMessages(prev => [...prev, data]);
-      
+
       // CREATE NOTIFICATION FOR THE RECEIVER
       const { error: notifError } = await supabase.from('notifications').insert({
         user_id: selectedContact.id,
@@ -214,29 +217,30 @@ export default function InboxPage() {
 
   return (
     <div className={`h-[calc(100vh-120px)] flex gap-6 animate-fade-in ${highContrast ? 'text-black' : ''}`}>
-      
+
       {/* Sidebar: Contacts List */}
-      <div className={`w-80 flex flex-col glass-card rounded-2xl border ${highContrast ? 'border-black' : 'border-border-color'} overflow-hidden shrink-0 hidden md:flex`}>
+      <Card className={`w-80 flex flex-col glass-card bg-transparent border-transparent shadow-none rounded-2xl overflow-hidden shrink-0 hidden md:flex`}>
         <div className="p-4 border-b border-border-color">
           <h2 className="text-lg font-bold mb-4">Direct Messages</h2>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
-            <input 
-              type="text" 
+            <Input
+              type="text"
               placeholder="Search colleagues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl text-sm border bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="pl-9"
             />
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {filteredContacts.map(contact => (
-            <button
+            <Button
               key={contact.id}
+              variant="ghost"
               onClick={() => { setSelectedContact(contact); setInterceptionAlert(null); }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${selectedContact?.id === contact.id ? 'bg-teal-50 border-teal-100 border' : 'hover:bg-neutral-50 border border-transparent'}`}
+              className={`w-full h-auto justify-start gap-3 p-3 rounded-xl ${selectedContact?.id === contact.id ? 'bg-teal-50 hover:bg-teal-50 border-teal-100 border' : 'border border-transparent hover:bg-neutral-50'}`}
             >
               <div className="w-10 h-10 rounded-full bg-neutral-200 overflow-hidden shrink-0 flex items-center justify-center">
                 {contact.avatar || contact.profile_image ? (
@@ -249,13 +253,13 @@ export default function InboxPage() {
                 <p className="font-bold text-sm truncate">{contact.full_name}</p>
                 <p className="text-[11px] text-neutral-500 truncate">{contact.job_title || 'Colleague'}</p>
               </div>
-            </button>
+            </Button>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col glass-card rounded-2xl border ${highContrast ? 'border-black' : 'border-border-color'} overflow-hidden`}>
+      <Card className={`flex-1 flex flex-col glass-card bg-transparent border-transparent shadow-none rounded-2xl overflow-hidden`}>
         {selectedContact ? (
           <>
             {/* Chat Header */}
@@ -277,7 +281,7 @@ export default function InboxPage() {
                   </div>
                 </div>
               </div>
-              
+
               {isOffDuty(selectedContact) && (
                 <div className="px-3 py-1.5 bg-orange-50 border border-orange-100 rounded-lg flex items-center gap-2 text-xs font-bold text-orange-700">
                   <Clock className="w-3.5 h-3.5" />
@@ -330,20 +334,20 @@ export default function InboxPage() {
             {/* Chat Input */}
             <div className="p-4 bg-white border-t border-border-color">
               <form onSubmit={handleSendMessage} className="flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-3 bg-neutral-100 border-transparent focus:bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all border"
+                  className="flex-1"
                 />
-                <button
+                <Button
                   type="submit"
+                  size="icon"
                   disabled={!messageInput.trim() || isSending}
-                  className="px-4 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center justify-center shrink-0"
                 >
                   <Send className="w-4 h-4" />
-                </button>
+                </Button>
               </form>
             </div>
           </>
@@ -354,8 +358,8 @@ export default function InboxPage() {
             <p className="text-xs mt-1">Choose a colleague from the sidebar to start messaging.</p>
           </div>
         )}
-      </div>
-      
+      </Card>
+
     </div>
   );
 }
