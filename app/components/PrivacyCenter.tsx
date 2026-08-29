@@ -165,7 +165,7 @@ export default function PrivacyCenter() {
  {/* Protocol Explanation Cards */}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  {/* k-Anonymity card */}
- <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl space-y-4 ${
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl gap-4 ${
  highContrast ? 'text-black' : ''
 }`}>
  <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
@@ -182,7 +182,7 @@ export default function PrivacyCenter() {
  </Card>
 
  {/* Local CV processing card */}
- <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl space-y-4 ${
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl gap-4 ${
  highContrast ? 'text-black' : ''
 } ${cvGlobalDisabled ?'opacity-60' :''}`}>
  {cvGlobalDisabled && (
@@ -206,7 +206,7 @@ export default function PrivacyCenter() {
  </div>
 
  {/* Data Management Center */}
- <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl space-y-5 ${
+ <Card className={`p-6 glass-card bg-transparent border-transparent shadow-none rounded-2xl gap-5 ${
  highContrast ? 'text-black' : ''
 }`}>
  <div className="flex items-center gap-2 border-b pb-3 border-neutral-100">
@@ -246,7 +246,7 @@ export default function PrivacyCenter() {
 
  {/* Purge Profile Warning dialog */}
  <Dialog open={showPurgeConfirm} onOpenChange={setShowPurgeConfirm}>
- <DialogContent className={`sm:max-w-md space-y-4 ${highContrast ? 'text-black' : ''}`}>
+ <DialogContent aria-describedby="purge-desc" className={`sm:max-w-md gap-4 ${highContrast ? 'text-black' : ''}`}>
  <DialogHeader>
  <div className="flex items-start gap-3">
  <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
@@ -261,7 +261,7 @@ export default function PrivacyCenter() {
  </div>
  </DialogHeader>
 
- <div className="text-xs text-neutral-500 leading-relaxed space-y-2">
+ <div id="purge-desc" className="text-xs text-neutral-500 leading-relaxed space-y-2">
  {purgeSuccess ? (
  <div className="py-4 text-center space-y-3">
  <div className="h-12 w-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">

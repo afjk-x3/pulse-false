@@ -1,9 +1,16 @@
 import type { ReactElement } from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PrivacyCenter from './PrivacyCenter';
 import { AccessibilityProvider } from '../context/AccessibilityContext';
+
+// Hoisted so the spies are referenceable both inside the vi.mock factory
+// (which is itself hoisted above imports) and inside the test bodies below.
+const { updateSpy, eqSpy } = vi.hoisted(() => ({
+  updateSpy: vi.fn(),
+  eqSpy: vi.fn().mockResolvedValue({ error: null }),
+}));
 
 vi.mock('../lib/supabaseClient', () => ({
   supabase: {
@@ -31,10 +38,9 @@ vi.mock('../lib/supabaseClient', () => ({
         };
       }
       if (table === 'user_profiles') {
+        updateSpy.mockReturnValue({ eq: eqSpy });
         return {
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ error: null }),
-          }),
+          update: updateSpy,
         };
       }
       throw new Error(`Unexpected table in test: ${table}`);
@@ -45,6 +51,11 @@ vi.mock('../lib/supabaseClient', () => ({
 function renderWithAccessibility(ui: ReactElement) {
   return render(<AccessibilityProvider>{ui}</AccessibilityProvider>);
 }
+
+beforeEach(() => {
+  updateSpy.mockClear();
+  eqSpy.mockClear();
+});
 
 describe('PrivacyCenter', () => {
   it('renders the export and delete actions', async () => {
@@ -75,6 +86,7 @@ describe('PrivacyCenter', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 
   it('shows a success state after confirming deletion', async () => {
@@ -86,5 +98,6 @@ describe('PrivacyCenter', () => {
     await user.click(screen.getByRole('button', { name: /delete all data/i }));
 
     expect(await screen.findByText(/deletion request submitted/i)).toBeInTheDocument();
+    expect(updateSpy).toHaveBeenCalledWith({ status: 'pending_deletion_approval' });
   });
 });
