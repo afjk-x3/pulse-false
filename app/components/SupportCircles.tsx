@@ -1,10 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useRef} from'react';
-import { Send, ShieldCheck, User, Compass, Plus, X, Search, ChevronLeft} from'lucide-react';
+import { Send, ShieldCheck, User, Compass, Plus, Search, ChevronLeft} from'lucide-react';
 import { supabase} from'../lib/supabaseClient';
 import { Database} from'../lib/database.types';
 import { useAccessibility} from'../context/AccessibilityContext';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { Input } from './ui/input';
+import { Switch } from './ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
 
 type SupportCircleMessage = Database['public']['Tables']['support_circle_messages']['Row'];
 
@@ -110,7 +121,7 @@ export default function SupportCircles() {
  const rawAlias = m.pseudonym_alias;
  const isActuallyRealName = rawAlias && rawAlias.startsWith('REALNAME:');
  const isAnon = rawAlias && !isActuallyRealName;
- 
+
  let displayAuthor ='Unknown User';
  if (isAnon) {
  displayAuthor = rawAlias;
@@ -182,37 +193,34 @@ export default function SupportCircles() {
 
  return (
  <>
- <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] lg:h-[550px] glass-card rounded-2xl border overflow-hidden ${highContrast ?'border-black text-black' :'border-border-color'
-}`}>
+ <Card className={`grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] lg:h-[550px] glass-card bg-transparent border-transparent shadow-none rounded-2xl overflow-hidden ${highContrast ? 'text-black' : ''}`}>
  {/* Channels Sidebar List */}
  <div className={`p-4 border-r overflow-y-auto space-y-3.5 flex-col justify-between ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'} ${highContrast ?'border-black' :'border-border-color bg-neutral-50/20'
 }`}>
  <div className="space-y-4">
  {/* Action Buttons */}
  <div className="space-y-2">
- <button
+ <Button
  type="button"
+ variant="outline"
  onClick={() => setIsDiscoverModalOpen(true)}
- className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
+ className={`w-full gap-1.5 ${highContrast
  ?'border-black hover:bg-neutral-100 text-black glass-card'
  :'border-dashed border-teal-300 hover:border-teal-500 text-teal-700 bg-teal-50/20 hover:bg-teal-50'
 }`}
  >
  <Compass className="h-4.5 w-4.5" />
  <span>Discover More Circles</span>
- </button>
- 
- <button
+ </Button>
+
+ <Button
  type="button"
  onClick={() => setIsCreateModalOpen(true)}
- className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
- ?'border-black bg-black text-white hover:bg-neutral-800'
- :'border-teal-500 bg-teal-500 text-white hover:bg-teal-600 shadow-sm'
-}`}
+ className="w-full gap-1.5"
  >
  <Plus className="h-4.5 w-4.5" />
  <span>Create New Circle</span>
- </button>
+ </Button>
  </div>
 
  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -225,19 +233,20 @@ export default function SupportCircles() {
  let circleStyle ='';
  if (isActive) {
  circleStyle = highContrast
- ?'bg-black text-white border-2 border-black font-bold'
- :'bg-teal-50 border-teal-200 text-teal-900 border font-semibold';
+ ?'bg-black hover:bg-black text-white border-2 border-black font-bold'
+ :'bg-teal-50 hover:bg-teal-50 border-teal-200 text-teal-900 border font-semibold';
 } else {
- circleStyle ='glass-card hover:bg-neutral-50 text-neutral-600 border border-neutral-100/70';
+ circleStyle ='glass-card hover:bg-neutral-50 text-neutral-600 border-neutral-100/70';
 }
 
  return (
- <button
+ <Button
  key={circle.id}
+ variant="ghost"
  onClick={() => { setActiveCircleId(circle.id); setMobileView('chat'); }}
  role="option"
  aria-selected={isActive}
- className={`w-full text-left p-3.5 rounded-xl transition flex gap-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${circleStyle}`}
+ className={`w-full h-auto justify-start text-left p-3.5 gap-3 rounded-xl border ${circleStyle}`}
  >
  <span className="text-2xl shrink-0 select-none">{circle.emoji}</span>
  <div>
@@ -246,7 +255,7 @@ export default function SupportCircles() {
  {circle.desc}
  </span>
  </div>
- </button>
+ </Button>
  );
 })}
  </div>
@@ -268,9 +277,15 @@ export default function SupportCircles() {
  <div className={`p-4 border-b flex items-center justify-between shrink-0 ${highContrast ?'border-black' :'border-border-color'
 }`}>
  <div className="flex items-center gap-2">
- <button onClick={() => setMobileView('list')} className="lg:hidden p-1 mr-1 text-neutral-500 hover:text-neutral-700 bg-neutral-100 rounded-full transition" aria-label="Back to circles">
+ <Button
+ variant="ghost"
+ size="icon"
+ onClick={() => setMobileView('list')}
+ className="lg:hidden mr-1 size-7 text-neutral-500 hover:text-neutral-700 bg-neutral-100 rounded-full"
+ aria-label="Back to circles"
+ >
  <ChevronLeft className="h-5 w-5" />
- </button>
+ </Button>
  <span className="text-2xl select-none">{activeCircle.emoji}</span>
  <div>
  <h2 className="text-xs font-bold text-neutral-800 leading-none">{activeCircle.name} Channel</h2>
@@ -296,8 +311,7 @@ export default function SupportCircles() {
  ) : error ? (
  <div className="py-20 text-center text-red-500 text-xs">{error}</div>
  ) : activeCircleMessages.length === 0 ? (
- <div className={`py-16 px-6 text-center glass-card rounded-2xl border ${highContrast ?'border-black' :'border-border-color'
-}`}>
+ <Card className="py-16 px-6 text-center glass-card bg-transparent border-transparent shadow-none rounded-2xl">
  <div className="h-12 w-12 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-4 border border-teal-100">
  <span className="text-2xl select-none">{activeCircle.emoji}</span>
  </div>
@@ -305,7 +319,7 @@ export default function SupportCircles() {
  <p className="text-[11px] text-neutral-400 mt-1 max-w-sm mx-auto leading-relaxed">
  Share your thoughts, challenges, or wins. Your perspective might be exactly what someone else in the <span className="font-semibold text-neutral-600">{activeCircle.name}</span> circle needs to hear today.
  </p>
- </div>
+ </Card>
  ) : (
  activeCircleMessages.map((msg) => (
  <div
@@ -358,18 +372,11 @@ export default function SupportCircles() {
  <label htmlFor="anon-post-toggle" className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider shrink-0">
  Post anonymously:
  </label>
- <button
- type="button"
+ <Switch
  id="anon-post-toggle"
- onClick={() => setIsAnonymous(!isAnonymous)}
- className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${isAnonymous ?'bg-teal-600' :'bg-neutral-200'
-}`}
- aria-checked={isAnonymous}
- role="switch"
- >
- <span className={`pointer-events-none inline-block h-4.5 w-4.5 transform rounded-full glass-card shadow-sm ring-0 transition duration-200 ease-in-out ${isAnonymous ?'translate-x-4' :'translate-x-0'
-}`} />
- </button>
+ checked={isAnonymous}
+ onCheckedChange={setIsAnonymous}
+ />
  </div>
 
  <span className="text-[9px] text-neutral-400 leading-tight">
@@ -379,75 +386,50 @@ export default function SupportCircles() {
 
  {/* Typing Area */}
  <div className="flex gap-2">
- <input
+ <Input
  type="text"
  placeholder={`Send message to #${activeCircle.name.toLowerCase()}...`}
  value={inputText}
  onChange={(e) => setInputText(e.target.value)}
- className={`flex-1 p-2.5 rounded-xl border text-xs glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'
-}`}
+ className="flex-1 text-xs font-semibold"
  />
- <button
+ <Button
  type="submit"
- className={`p-2.5 rounded-xl transition focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast
- ?'bg-black text-white hover:bg-neutral-800'
- :'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
-}`}
+ size="icon"
  aria-label="Send message"
  >
  <Send className="h-4.5 w-4.5" />
- </button>
+ </Button>
  </div>
  </form>
  </div>
- </div>
+ </Card>
 
- {/* Discover Support Circles Modal Overlay */}
- {isDiscoverModalOpen && (
- <div
- className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/40 backdrop-blur-xs animate-fade-in"
- role="dialog"
- aria-modal="true"
- aria-labelledby="discover-modal-title"
- aria-describedby="discover-modal-desc"
- >
- <div className={`w-full max-w-2xl p-6 bg-white rounded-2xl border shadow-2xl space-y-4.5 animate-scale-up ${highContrast ?'border-black text-black' :'border-neutral-100'
-}`}>
- {/* Header */}
- <div className="flex items-center justify-between border-b pb-3 border-neutral-100">
+ {/* Discover Support Circles Modal */}
+ <Dialog open={isDiscoverModalOpen} onOpenChange={(open) => { setIsDiscoverModalOpen(open); if (!open) setSearchQuery(''); }}>
+ <DialogContent className={`sm:max-w-2xl ${highContrast ? 'text-black' : ''}`}>
+ <DialogHeader>
  <div className="flex items-center gap-2">
  <Compass className="h-5 w-5 text-teal-600" />
- <h3 id="discover-modal-title" className="text-sm font-bold text-neutral-800">
+ <DialogTitle className="text-sm text-neutral-800">
  Discover Support Circles
- </h3>
+ </DialogTitle>
  </div>
- <button
- onClick={() => {
- setIsDiscoverModalOpen(false);
- setSearchQuery('');
-}}
- className="p-1.5 rounded-lg hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500 transition"
- aria-label="Close discovery modal"
- >
- <X className="h-4.5 w-4.5" />
- </button>
- </div>
+ </DialogHeader>
 
- {/* Description */}
- <p id="discover-modal-desc" className="text-xs text-neutral-500 leading-normal">
+ <p className="text-xs text-neutral-500 leading-normal">
  Explore other private, pseudonymous support communities within WBG. Joining adds the circle to your sidebar and connects you with peer resources.
  </p>
 
  {/* Search Input Bar */}
  <div className="relative">
- <Search className="absolute left-3.5 top-3 h-4 w-4 text-neutral-400" />
- <input
+ <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 z-10" />
+ <Input
  type="text"
  placeholder="Search support circles by name, description, or keyword..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black text-black' :'border-border-color'
-}`}
+ className="pl-10 text-xs font-semibold"
  />
  </div>
 
@@ -480,83 +462,73 @@ export default function SupportCircles() {
  </div>
  </div>
 
- <button
+ <Button
+ size="sm"
  onClick={() => handleJoinCircle(circle)}
- className={`px-3.5 py-2 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shrink-0 ${highContrast
- ?'bg-black text-white hover:bg-neutral-800'
- :'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
-}`}
+ className="gap-1 shrink-0"
  >
  <Plus className="h-3.5 w-3.5" />
  <span>Join Circle</span>
- </button>
+ </Button>
  </div>
  ))
  )}
  </div>
 
- {/* Footer actions */}
- <div className="flex items-center justify-end border-t pt-3.5 border-neutral-100">
- <button
+ <DialogFooter>
+ <Button
+ variant="secondary"
+ size="sm"
  onClick={() => {
  setIsDiscoverModalOpen(false);
  setSearchQuery('');
 }}
- className={`px-4 py-2 text-xs font-bold rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition`}
  >
  Done
- </button>
- </div>
- </div>
- </div>
- )}
+ </Button>
+ </DialogFooter>
+ </DialogContent>
+ </Dialog>
 
  {/* Create Circle Modal */}
- {isCreateModalOpen && (
- <>
- <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 animate-fade-in" onClick={() => setIsCreateModalOpen(false)} />
- <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
- <div className={`w-full max-w-md bg-white rounded-2xl shadow-2xl border pointer-events-auto flex flex-col max-h-[85vh] animate-slide-up-fade ${highContrast ?'border-2 border-black' :'border-neutral-100'
-}`}>
- <div className={`p-4 border-b flex items-center justify-between ${highContrast ?'border-black' :'border-neutral-100'}`}>
- <h3 className="font-bold text-neutral-800 flex items-center gap-2">
+ <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+ <DialogContent className={`sm:max-w-md ${highContrast ? 'text-black' : ''}`}>
+ <DialogHeader>
+ <DialogTitle className="flex items-center gap-2 text-neutral-800">
  <Plus className="w-5 h-5 text-teal-600" />
  Create Employee Circle
- </h3>
- <button onClick={() => setIsCreateModalOpen(false)} className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors">
- <X className="w-5 h-5 text-neutral-500" />
- </button>
- </div>
- <div className="p-6 space-y-4">
+ </DialogTitle>
+ </DialogHeader>
+ <div className="space-y-4">
  <div>
  <label className="block text-xs font-bold text-neutral-600 mb-1.5">Circle Name</label>
- <input 
- type="text" 
+ <Input
+ type="text"
  value={newCircleName}
  onChange={e => setNewCircleName(e.target.value)}
  placeholder="e.g. Remote Developers"
- className="w-full p-2.5 rounded-lg border focus:ring-2 focus:ring-teal-500 outline-none text-sm font-semibold" 
+ className="text-sm font-semibold"
  />
  </div>
  <div>
  <label className="block text-xs font-bold text-neutral-600 mb-1.5">Description</label>
- <input 
- type="text" 
+ <Input
+ type="text"
  value={newCircleDesc}
  onChange={e => setNewCircleDesc(e.target.value)}
  placeholder="What is this circle about?"
- className="w-full p-2.5 rounded-lg border focus:ring-2 focus:ring-teal-500 outline-none text-sm" 
+ className="text-sm"
  />
  </div>
  <div>
  <label className="block text-xs font-bold text-neutral-600 mb-1.5">Emoji</label>
  <div className="flex gap-4 items-start">
- <input 
- type="text" 
+ <Input
+ type="text"
  value={newCircleEmoji}
  onChange={e => setNewCircleEmoji(e.target.value)}
  maxLength={2}
- className="w-16 p-2.5 text-center rounded-lg border focus:ring-2 focus:ring-teal-500 outline-none text-xl shrink-0" 
+ className="w-16 text-center text-xl shrink-0"
  />
  <div className="flex flex-wrap gap-1.5 bg-neutral-50 p-2 rounded-lg border border-neutral-100">
  {['💬','🧘','👩‍💻','🏃‍♂️','🏢','💤','🌈','🥑','🧠','🍼','☕','🌟','💡','🎉','🤝','🔥','❤️','🪴'].map((emoji) => (
@@ -564,8 +536,8 @@ export default function SupportCircles() {
  key={emoji}
  onClick={() => setNewCircleEmoji(emoji)}
  className={`w-7 h-7 flex items-center justify-center rounded text-base transition-all ${
- newCircleEmoji === emoji 
- ?'glass-card shadow-sm scale-110 border border-border-color' 
+ newCircleEmoji === emoji
+ ?'glass-card shadow-sm scale-110 border border-border-color'
  :'hover:bg-neutral-200/50 hover:scale-110 border border-transparent'
 }`}
  type="button"
@@ -578,11 +550,11 @@ export default function SupportCircles() {
  </div>
  </div>
  </div>
- <div className={`p-4 border-t flex justify-end gap-3 ${highContrast ?'border-black' :'border-neutral-100'}`}>
- <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-800">
+ <DialogFooter>
+ <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
  Cancel
- </button>
- <button 
+ </Button>
+ <Button
  onClick={() => {
  if (!newCircleName.trim()) return;
  const newId = newCircleName.toLowerCase().replace(/\s+/g,'-');
@@ -598,15 +570,12 @@ export default function SupportCircles() {
  setNewCircleName('');
  setNewCircleDesc('');
 }}
- className={`px-5 py-2 text-sm font-bold rounded-lg transition-colors ${highContrast ?'bg-black text-white hover:bg-neutral-800' :'bg-teal-600 text-white hover:bg-teal-700'}`}
  >
  Create Circle
- </button>
- </div>
- </div>
- </div>
- </>
- )}
+ </Button>
+ </DialogFooter>
+ </DialogContent>
+ </Dialog>
  </>
  );
 }
