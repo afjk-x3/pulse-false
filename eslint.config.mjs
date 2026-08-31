@@ -25,7 +25,6 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     // One-off Node scripts, not part of the Next.js app.
-    "capture_ui.js",
     "seed.js",
     // Claude Code local tool state: git worktrees live under here, nested
     // inside the main checkout, each with its own node_modules/.next/build
