@@ -6,9 +6,9 @@ import Sidebar, { TabType } from './Sidebar';
 import Header from './Header';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { supabase } from '../lib/supabaseClient';
-import Image from 'next/image';
 import SentimentWidget from './SentimentWidget';
 import MicroCoachingNudge from './MicroCoachingNudge';
+import LoginGate from './LoginGate';
 
 export const AuthContext = React.createContext<any>(null);
 
@@ -186,49 +186,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!currentUser || !session) {
     return (
-      <div className={`min-h-screen w-full flex bg-background ${highContrast ? 'glass-card text-black' : ''}`}>
-        <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-900 via-teal-800 to-teal-950 items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-          <div className="absolute inset-0 flex flex-col justify-end p-16 pb-24 text-white z-10">
-            <div className="space-y-4 max-w-md animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 relative"><Image src="/logo.svg" alt="AxionHR Logo" fill className="object-contain filter brightness-0 invert" /></div>
-                <h2 className="text-2xl font-bold tracking-tight">AxionHR Pulse</h2>
-              </div>
-              <h1 className="text-4xl font-extrabold leading-tight tracking-tight">Enterprise Telemetry & Well-Being Guardian</h1>
-              <p className="text-sm text-teal-100 font-medium leading-relaxed">Privacy-first workplace health monitoring.</p>
-            </div>
-          </div>
-        </div>
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 animate-fade-in">
-          <div className="w-full max-w-sm space-y-10">
-            <div className="lg:hidden text-center space-y-4 mb-8">
-              <div className="relative w-40 h-12 mx-auto select-none"><Image src="/logo.svg" alt="Pulse WBG Logo" fill className="object-contain" priority /></div>
-              <h1 className="text-xl font-bold text-neutral-800 tracking-tight">Well-Being Guardian</h1>
-            </div>
-            <div className="space-y-3 text-center lg:text-left">
-              <h2 className="text-3xl font-extrabold text-neutral-900 tracking-tight">Welcome back</h2>
-              <p className="text-sm text-neutral-500 font-medium">Please enter your corporate credentials to access the WBG portal.</p>
-            </div>
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="email" className="block text-xs font-bold text-neutral-700">Work Email</label>
-                  <input id="email" name="email" autoComplete="email" type="email" placeholder="e.g. alex.rivera@axionhr.com" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="w-full p-3.5 rounded-xl border text-sm glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" required />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="password" className="block text-xs font-bold text-neutral-700">Password</label>
-                  </div>
-                  <input id="password" name="password" autoComplete="current-password" type="password" placeholder="••••••••" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full p-3.5 rounded-xl border text-sm glass-card focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all" required />
-                </div>
-              </div>
-              {loginError && (<div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 font-semibold flex items-start gap-2"><span className="shrink-0 mt-0.5">⚠️</span><span>{loginError}</span></div>)}
-              <button type="submit" className="w-full py-3.5 rounded-xl text-sm font-bold text-center border transition-all active:scale-[0.98] bg-teal-600 text-white hover:bg-teal-700 shadow-lg hover:shadow-xl ">Sign In to Portal</button>
-            </form>
-          </div>
-        </div>
-      </div>
+      <LoginGate
+        email={emailInput}
+        onEmailChange={setEmailInput}
+        password={passwordInput}
+        onPasswordChange={setPasswordInput}
+        error={loginError}
+        onSubmit={handleFormSubmit}
+      />
     );
   }
 
