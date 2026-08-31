@@ -51,10 +51,9 @@ export default function InboxPage() {
     if (!currentUser) return;
     const fetchData = async () => {
       const { data: contactsData } = await supabase
-        .from('user_profiles')
+        .from('colleague_directory')
         .select('*')
         .neq('id', currentUser.id)
-        .not('role', 'in', '(admin,it)')
         .order('full_name');
       if (contactsData) setContacts(contactsData);
 

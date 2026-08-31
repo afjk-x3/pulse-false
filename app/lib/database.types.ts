@@ -589,7 +589,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      colleague_directory: {
+        Row: {
+          avatar: string | null
+          full_name: string
+          id: string
+          job_title: string | null
+          profile_image: string | null
+          timezone: string
+          working_hours_end: string
+          working_hours_start: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
