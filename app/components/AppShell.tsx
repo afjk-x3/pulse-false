@@ -10,6 +10,7 @@ import SentimentWidget from './SentimentWidget';
 import MicroCoachingNudge from './MicroCoachingNudge';
 import LoginGate from './LoginGate';
 import ProfileSetupDialog from './ProfileSetupDialog';
+import { Alert, AlertDescription } from './ui/alert';
 
 export const AuthContext = React.createContext<any>(null);
 
@@ -219,10 +220,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Header title={pageTitle} currentUser={currentUser} onLogout={handleLogout} />
 
         {systemPaused && (
-          <div className="w-full bg-red-600 text-white py-3.5 px-6 text-xs font-extrabold flex items-center justify-center gap-2 border-b border-red-750 select-none animate-slide-down">
-            <span className="inline-block p-1 bg-red-800 rounded-md">⚠️ SYSTEM PORTAL PAUSED</span>
-            <p>Corporate administration has suspended all well-being telemetry org-wide.</p>
-          </div>
+          <Alert
+            variant="destructive"
+            className="w-full rounded-none border-x-0 border-t-0 py-3.5 px-6 flex items-center justify-center gap-2 animate-slide-down"
+          >
+            <AlertDescription className="text-xs font-extrabold flex items-center gap-2">
+              <span className="inline-block p-1 bg-red-800 rounded-md">⚠️ SYSTEM PORTAL PAUSED</span>
+              <span>Corporate administration has suspended all well-being telemetry org-wide.</span>
+            </AlertDescription>
+          </Alert>
         )}
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-7xl w-full mx-auto">
