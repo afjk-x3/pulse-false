@@ -218,7 +218,7 @@ export default function InboxPage() {
   const filteredContacts = contacts.filter(c => c.full_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className={`h-[calc(100vh-120px)] flex gap-6 animate-fade-in ${highContrast ? 'text-black' : ''}`}>
+    <div className={`h-[calc(100vh-160px)] flex gap-6 animate-fade-in ${highContrast ? 'text-black' : ''}`}>
 
       {/* Sidebar: Contacts List */}
       <Card className={`w-80 flex flex-col glass-card bg-transparent border-transparent shadow-none rounded-2xl overflow-hidden shrink-0 hidden md:flex`}>
