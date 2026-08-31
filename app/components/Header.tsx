@@ -18,6 +18,10 @@ import {
 import { useAccessibility} from'../context/AccessibilityContext';
 import WebcamCVConsentModal from'./WebcamCVConsentModal';
 import { supabase} from'../lib/supabaseClient';
+import { Button } from'./ui/button';
+import { Popover, PopoverTrigger, PopoverContent} from'./ui/popover';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle} from'./ui/sheet';
+import HeaderNotificationsPanel from'./HeaderNotificationsPanel';
 
 interface HeaderProps {
  title: string;
@@ -92,6 +96,24 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     await supabase.from('notifications').update({ read: true }).eq('id', id);
   };
+
+  // The notifications trigger renders both a Popover (desktop) and a Sheet
+  // (mobile); PopoverContent/SheetContent both portal to document.body, so
+  // CSS alone (`hidden sm:block` / `sm:hidden` on the trigger wrappers)
+  // cannot keep the "wrong" one from becoming an interactive Radix root --
+  // Tailwind's breakpoint classes only ever hide the trigger button, not the
+  // portaled content. Gate each root's `open` prop on the actual viewport so
+  // only one is ever live at a time, matching the shadcn responsive
+  // dialog/drawer pattern.
+  const [isDesktopNotif, setIsDesktopNotif] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 640px)');
+    const update = () => setIsDesktopNotif(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+
  const [cvActive, setCvActive] = useState(false);
 
   const [isMobileProfileMenuOpen, setIsMobileProfileMenuOpen] = useState(false);
@@ -309,91 +331,40 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  {/* Header Actions */}
  <div className="flex items-center gap-2 sm:gap-4">
 
- {/* Notifications Dropdown */}
- <div className="relative">
- <button
- onClick={() => setIsNotifMenuOpen(!isNotifMenuOpen)}
- className={`p-2.5 rounded-full relative transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 ${isNotifMenuOpen
- ? (highContrast ?'bg-black text-white border-2 border-black' :'bg-teal-50 text-teal-600 border border-teal-200')
- : (highContrast ?'border border-black text-black hover:bg-neutral-100' :'bg-neutral-50 text-neutral-600 hover:bg-neutral-100')
-}`}
- aria-expanded={isNotifMenuOpen}
- aria-haspopup="true"
- aria-label="Notifications"
- >
+ {/* Notifications */}
+ {/* Desktop: anchored popover */}
+ <div className="hidden sm:block">
+ <Popover open={isNotifMenuOpen && isDesktopNotif} onOpenChange={setIsNotifMenuOpen}>
+ <PopoverTrigger asChild>
+ <Button variant="ghost" size="icon" aria-label="Notifications" className="rounded-full relative">
  <Bell className="h-5 w-5" />
  {notifications.filter(n => !n.read).length > 0 && (
  <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
  )}
- </button>
+ </Button>
+ </PopoverTrigger>
+ <PopoverContent align="end" className="w-80 p-5 max-h-[60vh] overflow-y-auto">
+ <HeaderNotificationsPanel notifications={notifications} onClose={() => setIsNotifMenuOpen(false)} onMarkAsRead={markAsRead} />
+ </PopoverContent>
+ </Popover>
+ </div>
 
-  {/* Dropdown Menu */}
-  {isNotifMenuOpen && (
-  <>
-  {/* Mobile Backdrop */}
-  <div className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm sm:hidden animate-fade-in" onClick={(e) => { e.stopPropagation(); setIsNotifMenuOpen(false); }} />
-  
-  {/* Desktop Overlay blocker for outside clicks */}
-  <div className="hidden sm:block fixed inset-0 z-40" onClick={() => setIsNotifMenuOpen(false)} />
-
-  <div 
-    className={`
-      fixed inset-x-4 top-1/2 -translate-y-1/2 z-[101] p-5 rounded-2xl shadow-2xl flex flex-col max-h-[85vh] bg-white border
-      sm:absolute sm:inset-auto sm:top-auto sm:right-0 sm:mt-3 sm:w-80 sm:p-5 sm:rounded-xl sm:shadow-xl sm:z-50 sm:max-h-[60vh] sm:translate-y-0
-      transition-all animate-fade-in
-      ${highContrast ?'border-black text-black' :'border-border-color'}
-    `}
-    onClick={(e) => e.stopPropagation()}
-  >
-  <div className="flex items-center justify-between border-b pb-3 mb-4 shrink-0">
-  <div className="flex items-center gap-2">
-  <Bell className="h-5 w-5 text-teal-600" />
-  <span className="font-bold text-neutral-800">Notifications</span>
-  </div>
-  <button
-  onClick={() => setIsNotifMenuOpen(false)}
-  className="p-1 rounded hover:bg-neutral-100 focus:ring-2 focus:ring-teal-500"
-  aria-label="Close notifications panel"
-  >
-  <X className="h-4 w-4" />
-  </button>
-  </div>
-  
-  <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar">
- {notifications.length === 0 ? (
- <div className="text-center text-sm text-neutral-500 py-4">No notifications</div>
- ) : (
- notifications.map(notif => (
- <div 
- key={notif.id} 
- onClick={() => markAsRead(notif.id)}
- className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm ${notif.read ?'bg-white border-border-color hover:bg-neutral-50' :'bg-teal-50 border-teal-200 hover:bg-teal-100/50'} ${highContrast ?'border-black' :''}`}
- role="button"
- tabIndex={0}
- onKeyDown={(e) => {
- if (e.key ==='Enter' || e.key ===' ') {
- e.preventDefault();
- markAsRead(notif.id);
-}
-}}
- >
- <div className="flex justify-between items-start mb-1">
- <h4 className="text-sm font-semibold text-neutral-800">{notif.title}</h4>
- <span className="text-[10px] text-neutral-500">{new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
- </div>
- <p className="text-xs text-neutral-600 text-left">{notif.message}</p>
- {!notif.read && (
- <div className="text-[10px] text-teal-600 font-bold mt-2 text-left">
- Click to mark as read
- </div>
+ {/* Mobile: centred sheet */}
+ <div className="sm:hidden">
+ <Sheet open={isNotifMenuOpen && !isDesktopNotif} onOpenChange={setIsNotifMenuOpen}>
+ <SheetTrigger asChild>
+ <Button variant="ghost" size="icon" aria-label="Notifications" className="rounded-full relative">
+ <Bell className="h-5 w-5" />
+ {notifications.filter(n => !n.read).length > 0 && (
+ <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
  )}
- </div>
- ))
- )}
- </div>
- </div>
- </>
- )}
+ </Button>
+ </SheetTrigger>
+ <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto p-5">
+ <SheetHeader className="sr-only"><SheetTitle>Notifications</SheetTitle></SheetHeader>
+ <HeaderNotificationsPanel notifications={notifications} onClose={() => setIsNotifMenuOpen(false)} onMarkAsRead={markAsRead} />
+ </SheetContent>
+ </Sheet>
  </div>
   {/* User Profile Info */}
   <div className="relative pl-2 sm:border-l border-border-color flex items-center">
