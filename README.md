@@ -75,6 +75,39 @@ Every feature and component in Pulse is directly mapped to one of the **6 Core P
 
 ---
 
+## Feature Implementation Status
+
+To provide transparency into what is fully integrated with live backend persistence versus what serves as a high-fidelity visual prototype, the matrix below details the current operational status of each capability.
+
+### 1. Fully Functional Live Features (Backed by Database & Business Logic)
+
+These modules are connected to the live Supabase PostgreSQL database with Row Level Security, real-time channels, and active state persistence:
+
+- **Direct Messaging & Boundary Interception (`/inbox`)**: Fully functional live chat with PostgreSQL persistence, real-time message subscriptions, off-duty timezone calculations, and automated rerouting to the Outbox.
+- **Right-to-Disconnect Outbox (`/inbox`, `/`)**: Live message queue storing delayed communications, supporting manual cancelation, editing, and automated shift delivery scheduling.
+- **Sentiment & Mood Logging (`/`)**: Live database persistence for daily mood logs (`mood_logs`), interactive emoji logging, and real-time refresh across dashboards.
+- **Peer Kudos Wall (`/kudos`)**: Live creation, querying, and feed display of recognition posts (`kudos_posts`) tagged with core organizational values.
+- **Support Circles (`/support`)**: Live circle membership management, active participant counts, and category-filtered group navigation (`support_circles`).
+- **Coffee Roulette (`/coffee`)**: Interactive matching opt-in, automated pairings, and meeting acceptance/reschedule workflows (`coffee_roulettes`).
+- **Privacy Center & GDPR Sovereignty (`/privacy`)**: Fully operational JSON data export (downloads complete user profile & activity payload), consent toggles, and scheduled account purge backed by Supabase `pg_cron` jobs.
+- **User Management & RBAC (`/users`)**: Live account directory management, status toggling, and role updates (Employee, Manager, Admin).
+- **Admin System Configuration (`/admin`)**: Live persistence of enterprise parameters (`admin_configs`), including standard working hours, EAP URLs, k-anonymity floors, and camera kill switches.
+- **Accessibility & Cognitive Inclusivity Engine**: Fully interactive client-side engine providing instant OpenDyslexic font switching, interactive draggable reading ruler, dynamic font scaling (90%-125%), high contrast, and card focus dimming.
+- **Authentication & Role-Based Gate (`LoginGate`)**: Full Supabase authentication, session handling, and role-based navigation permissions.
+
+### 2. Visual Prototype & Simulated Features (UI / Demonstration Only)
+
+These modules provide rich, interactive frontend visual designs to demonstrate product concepts, with simulated or mock data:
+
+- **On-Device BRI Machine Learning Engine**: The 7-day Burnout Risk Index (BRI) charts and heatmaps render from database shift records and mock baselines. The real-time client-side local ML inference model (GBDT training on raw OS telemetry) is visually simulated.
+- **GBDT Factor Attribution Explainer**: The visual cards explaining score shifts (e.g., meeting overload, after-hours chatter) showcase the explainable AI interface, fed by mock/seeded attribution data rather than a live local training pipeline.
+- **Manager Aggregate Analytics & k-Anonymity Gate**: The manager dashboard displays interactive visual charts with simulated team cohorts and demonstrates the k-anonymity threshold empty state ($k < 5$) via client-side simulation.
+- **Webcam Computer Vision (CV) Telemetry**: The privacy consent modal, opt-in dialogues, and status badges are fully interactive, but actual live camera stream face-mesh processing is a visual simulation placeholder.
+- **Calendar Guard Third-Party Sync**: Meeting timelines and workload metrics are populated from seeded database records (`scheduled_meetings`) rather than a live Google Workspace or Microsoft 365 OAuth calendar integration.
+- **Enterprise SSO & SCIM Directory Provisioning**: The Admin Console exposes UI configuration fields for SAML/SCIM identity providers for enterprise demonstration without live third-party IdP connectors (e.g., Okta, Azure AD).
+
+---
+
 ## Foundational Privacy & Security Infrastructure
 
 Underpinning all six pillars is an enterprise-grade privacy architecture:
@@ -93,8 +126,6 @@ Underpinning all six pillars is an enterprise-grade privacy architecture:
 | **Employee** | `alex.rivera@axionhr.com` | `password123` | Personal Dashboard, Chat, Kudos, Support Circles, Privacy Center |
 | **Manager / HR** | `derek.vance@axionhr.com` | `password123` | Manager Dashboard (k-Anonymity Protected), Team Metrics, Employee Tools |
 | **Administrator** | `priya.sharma@axionhr.com` | `password123` | Admin Console, User Management, Global Privacy Controls, Audit Logs |
-
-*Alternative demo accounts: `sam.employee@axionhr.com` (Employee), `jordan.manager@axionhr.com` (Manager).*
 
 ---
 
