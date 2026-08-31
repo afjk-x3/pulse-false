@@ -154,8 +154,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const roleConfig = {
         employee: ['dashboard', 'inbox', 'kudos', 'support', 'coffee', 'privacy', 'settings'],
         manager: ['dashboard', 'inbox', 'manager', 'kudos', 'support', 'coffee', 'privacy', 'settings'],
-        admin: ['admin', 'inbox', 'users', 'privacy', 'settings'],
-        it: ['admin', 'inbox', 'users', 'privacy', 'settings']
+        admin: ['admin', 'users', 'privacy'],
+        it: ['admin', 'users', 'privacy']
       };
 
       const allowedTabs = roleConfig[role as keyof typeof roleConfig] || roleConfig['employee'];
