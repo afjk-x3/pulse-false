@@ -222,9 +222,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {systemPaused && (
           <Alert
             variant="destructive"
-            className="w-full rounded-none border-x-0 border-t-0 py-3.5 px-6 flex items-center justify-center gap-2 animate-slide-down bg-red-600 text-white border-red-700 [&>[data-slot=alert-description]]:text-white"
+            className="w-full rounded-none border-x-0 border-t-0 py-3.5 px-6 flex items-center justify-center gap-2 animate-slide-down bg-red-600 text-white border-red-700"
           >
-            <AlertDescription className="text-xs font-extrabold flex items-center gap-2">
+            <AlertDescription className="text-xs font-extrabold flex items-center gap-2 !text-white">
               <span className="inline-block p-1 bg-red-800 rounded-md">⚠️ SYSTEM PORTAL PAUSED</span>
               <span>Corporate administration has suspended all well-being telemetry org-wide.</span>
             </AlertDescription>
