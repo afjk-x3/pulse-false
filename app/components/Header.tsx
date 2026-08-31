@@ -7,7 +7,6 @@ import {
  Accessibility,
  Video,
  VideoOff,
- X,
  LogOut,
  Maximize,
  Minimize,
@@ -22,6 +21,7 @@ import { Button } from'./ui/button';
 import { Popover, PopoverTrigger, PopoverContent} from'./ui/popover';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle} from'./ui/sheet';
 import HeaderNotificationsPanel from'./HeaderNotificationsPanel';
+import HeaderAccessibilityPanel from'./HeaderAccessibilityPanel';
 
 interface HeaderProps {
  title: string;
@@ -31,22 +31,7 @@ interface HeaderProps {
 
 export default function Header({ title, currentUser, onLogout}: HeaderProps) {
  const {
- openDyslexic,
- setOpenDyslexic,
- readingRuler,
- setReadingRuler,
- highContrast,
- setHighContrast,
- fontScale,
- setFontScale,
- ttsEnabled,
- setTtsEnabled,
- ttsSpeed,
- setTtsSpeed,
- ttsPitch,
- setTtsPitch,
- nudgeStyle,
- setNudgeStyle
+ highContrast
 } = useAccessibility();
 
  const [isAccessMenuOpen, setIsAccessMenuOpen] = useState(false);
@@ -109,6 +94,19 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 640px)');
     const update = () => setIsDesktopNotif(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+
+  // Same rationale as isDesktopNotif above: PopoverContent/SheetContent both
+  // portal to document.body, so the accessibility hub's desktop/mobile roots
+  // must be gated on the real viewport rather than on Tailwind's `hidden
+  // sm:block` / `sm:hidden` wrapper classes.
+  const [isDesktopAccess, setIsDesktopAccess] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 640px)');
+    const update = () => setIsDesktopAccess(mql.matches);
     update();
     mql.addEventListener('change', update);
     return () => mql.removeEventListener('change', update);
@@ -314,7 +312,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
 
  return (
  <>
- <header className={`sticky top-0 right-0 ${isAccessMenuOpen ? 'z-[70]' : 'z-50'} flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${highContrast
+ <header className={`sticky top-0 right-0 z-50 flex h-20 items-center justify-between px-6 lg:px-8 bg-white border-b select-none ${highContrast
  ?'border-black bg-white text-black'
  :'border-border-color'
 }`}>
@@ -409,196 +407,48 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
         </button>
 
         <div className="relative">
-          <button 
-            onClick={(e) => { e.stopPropagation(); setIsAccessMenuOpen(!isAccessMenuOpen); }}
-            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-between transition-colors ${isAccessMenuOpen ? 'bg-teal-50 text-teal-700' : 'hover:bg-neutral-50'}`}
-          >
-            <div className="flex items-center gap-3">
-              <Accessibility className="h-4 w-4 text-teal-600" />
-              <span>Accessibility Hub</span>
-            </div>
-            <span className="text-[10px] text-neutral-400">▶</span>
-          </button>
-          
-          {isAccessMenuOpen && (
-            <>
-              {/* Mobile Backdrop */}
-              <div className="fixed inset-0 z-[100] bg-neutral-900/40 backdrop-blur-sm sm:hidden animate-fade-in" onClick={(e) => { e.stopPropagation(); setIsAccessMenuOpen(false); }} />
-              
-              <div 
-                className={`
-                  fixed inset-x-4 top-1/2 -translate-y-1/2 z-[101] p-5 rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-y-auto bg-white border
-                  sm:absolute sm:inset-auto sm:top-0 sm:right-full sm:-translate-y-0 sm:mr-3 sm:w-72 md:w-80 sm:p-4 sm:rounded-xl sm:shadow-xl sm:z-50 sm:max-h-[80vh]
-                  transition-all animate-fade-in custom-scrollbar
-                  ${highContrast ? 'border-black text-black' : 'border-border-color'}
-                `} 
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between border-b pb-3 mb-4 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Accessibility className="h-5 w-5 text-teal-600" />
-                    <h2 className="font-bold text-neutral-800 text-sm">Accessibility Hub</h2>
+          {/* Desktop: anchored popover, flying out to the left of the profile dropdown */}
+          <div className="hidden sm:block">
+            <Popover open={isAccessMenuOpen && isDesktopAccess} onOpenChange={setIsAccessMenuOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-between transition-colors ${isAccessMenuOpen ? 'bg-teal-50 text-teal-700' : 'hover:bg-neutral-50'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Accessibility className="h-4 w-4 text-teal-600" />
+                    <span>Accessibility Hub</span>
                   </div>
-                  <button
-                    onClick={() => setIsAccessMenuOpen(false)}
-                    className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 sm:hidden"
-                    aria-label="Close accessibility panel"
-                  >
-                    <X className="h-4 w-4 text-neutral-500" />
-                  </button>
-                </div>
-              
-              <div className="space-y-4">
-                {/* OpenDyslexic Toggle */}
-                <div className="flex items-center justify-between">
-                <div>
-                <label htmlFor="dyslexic-toggle" className="block text-sm font-semibold text-neutral-700">OpenDyslexic Font</label>
-                <span className="text-[10px] text-neutral-400 block">Enables dyslexia-friendly typeface</span>
-                </div>
-                <button
-                id="dyslexic-toggle"
-                role="switch"
-                aria-checked={openDyslexic}
-                onClick={() => setOpenDyslexic(!openDyslexic)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${openDyslexic ?'bg-teal-600' :'bg-neutral-200'}`}
-                >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${openDyslexic ?'translate-x-4' :'translate-x-0'}`} />
+                  <span className="text-[10px] text-neutral-400">▶</span>
                 </button>
-                </div>
+              </PopoverTrigger>
+              <PopoverContent side="left" align="start" className="w-72 md:w-80 p-4 max-h-[80vh] overflow-y-auto">
+                <HeaderAccessibilityPanel />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-                {/* Reading Ruler Toggle */}
-                <div className="flex items-center justify-between">
-                <div>
-                <label htmlFor="ruler-toggle" className="block text-sm font-semibold text-neutral-700">Reading Ruler</label>
-                <span className="text-[10px] text-neutral-400 block">Horizontal tracking guide follows cursor</span>
-                </div>
+          {/* Mobile: centred sheet */}
+          <div className="sm:hidden">
+            <Sheet open={isAccessMenuOpen && !isDesktopAccess} onOpenChange={setIsAccessMenuOpen}>
+              <SheetTrigger asChild>
                 <button
-                id="ruler-toggle"
-                role="switch"
-                aria-checked={readingRuler}
-                onClick={() => setReadingRuler(!readingRuler)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${readingRuler ?'bg-teal-600' :'bg-neutral-200'}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-between transition-colors ${isAccessMenuOpen ? 'bg-teal-50 text-teal-700' : 'hover:bg-neutral-50'}`}
                 >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${readingRuler ?'translate-x-4' :'translate-x-0'}`} />
+                  <div className="flex items-center gap-3">
+                    <Accessibility className="h-4 w-4 text-teal-600" />
+                    <span>Accessibility Hub</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-400">▶</span>
                 </button>
-                </div>
-
-                {/* High Contrast Toggle */}
-                <div className="flex items-center justify-between">
-                <div>
-                <label htmlFor="contrast-toggle" className="block text-sm font-semibold text-neutral-700">High Contrast Mode</label>
-                <span className="text-[10px] text-neutral-400 block">Stark black & white layout borders</span>
-                </div>
-                <button
-                id="contrast-toggle"
-                role="switch"
-                aria-checked={highContrast}
-                onClick={() => setHighContrast(!highContrast)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${highContrast ?'bg-teal-600' :'bg-neutral-200'}`}
-                >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${highContrast ?'translate-x-4' :'translate-x-0'}`} />
-                </button>
-                </div>
-
-                {/* Font Scaling Options */}
-                <div className="border-t pt-3">
-                <label className="block text-[11px] font-semibold text-neutral-700 mb-1.5">Text Zoom Scale</label>
-                <div className="grid grid-cols-3 gap-1 p-1 bg-neutral-50 rounded-lg border border-neutral-100">
-                {(['normal','large','extra-large'] as const).map((scale) => (
-                <button
-                key={scale}
-                onClick={() => setFontScale(scale)}
-                className={`py-1 px-1.5 rounded-md text-[10px] font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${fontScale === scale
-                ?'bg-white text-neutral-900 shadow-sm border border-border-color font-bold'
-                :'text-neutral-500 hover:text-neutral-800'
-                }`}
-                >
-                {scale ==='normal' &&'100%'}
-                {scale ==='large' &&'120%'}
-                {scale ==='extra-large' &&'140%'}
-                </button>
-                ))}
-                </div>
-                </div>
-
-                {/* Text-to-Speech Toggle & Sliders */}
-                <div className="border-t pt-3 space-y-2">
-                <div className="flex items-center justify-between">
-                <div>
-                <label htmlFor="tts-toggle" className="block text-sm font-semibold text-neutral-700">Text-to-Speech</label>
-                <span className="text-[10px] text-neutral-400 block">Reads hovered text elements</span>
-                </div>
-                <button
-                id="tts-toggle"
-                role="switch"
-                aria-checked={ttsEnabled}
-                onClick={() => setTtsEnabled(!ttsEnabled)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 ${ttsEnabled ?'bg-teal-600' :'bg-neutral-200'}`}
-                >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${ttsEnabled ?'translate-x-4' :'translate-x-0'}`} />
-                </button>
-                </div>
-
-                {ttsEnabled && (
-                <div className="space-y-2 p-2 bg-neutral-50 rounded-lg border border-neutral-100">
-                <div>
-                <div className="flex justify-between text-[9px] font-bold text-neutral-500 mb-1">
-                <span>Speech Speed</span>
-                <span>{ttsSpeed}x</span>
-                </div>
-                <input
-                type="range"
-                min="0.5"
-                max="2.0"
-                step="0.1"
-                value={ttsSpeed}
-                onChange={(e) => setTtsSpeed(Number(e.target.value))}
-                className="w-full h-1 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-teal-600 focus:outline-none"
-                aria-label="Speech Speed"
-                />
-                </div>
-
-                <div>
-                <div className="flex justify-between text-[9px] font-bold text-neutral-500 mb-1">
-                <span>Speech Pitch</span>
-                <span>{ttsPitch}</span>
-                </div>
-                <input
-                type="range"
-                min="0.5"
-                max="2.0"
-                step="0.1"
-                value={ttsPitch}
-                onChange={(e) => setTtsPitch(Number(e.target.value))}
-                className="w-full h-1 bg-neutral-250 rounded-lg appearance-none cursor-pointer accent-teal-600 focus:outline-none"
-                aria-label="Speech Pitch"
-                />
-                </div>
-                </div>
-                )}
-                </div>
-
-                {/* Nudge Delivery Preferences */}
-                <div className="border-t pt-3">
-                <label htmlFor="nudge-style-select" className="block text-[11px] font-semibold text-neutral-700 mb-1.5">
-                Nudge Delivery Style
-                </label>
-                <select
-                id="nudge-style-select"
-                value={nudgeStyle}
-                onChange={(e) => setNudgeStyle(e.target.value as'toast' |'glow' |'push' |'off')}
-                className={`w-full p-2 rounded-lg border text-[11px] bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold ${highContrast ?'border-black' :'border-border-color'}`}
-                >
-                <option value="toast">Toast Notification</option>
-                <option value="glow">Ambient Edge-Glow</option>
-                <option value="push">Web Push Notification</option>
-                <option value="off">Off / Disabled</option>
-                </select>
-                </div>
-              </div>
-            </div>
-            </>
-          )}
+              </SheetTrigger>
+              <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto p-5">
+                <SheetHeader className="sr-only"><SheetTitle>Accessibility Hub</SheetTitle></SheetHeader>
+                <HeaderAccessibilityPanel />
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
 
         <div className="border-t border-border-color my-1" />

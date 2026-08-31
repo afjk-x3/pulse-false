@@ -60,4 +60,25 @@ describe('Header', () => {
 
     expect(await screen.findByText(/no notifications/i)).toBeInTheDocument();
   });
+
+  it('accessibility controls still write through to the context', async () => {
+    const user = userEvent.setup();
+    renderHeader(<Header title="Guardian Dashboard" currentUser={CURRENT_USER} onLogout={vi.fn()} />);
+
+    // The accessibility hub is reached through the profile dropdown (it is
+    // NOT a top-level header trigger) both before and after the shadcn
+    // migration. The high-contrast control is already role="switch" in the
+    // hand-built markup, so this same query works pre- and post-refactor.
+    // getAllByRole rather than getByRole: post-migration the hub trigger is
+    // duplicated (desktop Popover + mobile Sheet), and jsdom's lack of a
+    // layout engine means both are present in the accessibility tree even
+    // though Tailwind's `hidden sm:block` / `sm:hidden` would only show one
+    // in a real browser -- see the notifications test above for the same
+    // pattern.
+    await user.click(screen.getByRole('button', { name: /toggle profile menu/i }));
+    await user.click(screen.getAllByRole('button', { name: /accessibility hub/i })[0]);
+    await user.click(await screen.findByRole('switch', { name: /high contrast/i }));
+
+    expect(document.body).toHaveClass('high-contrast');
+  });
 });
