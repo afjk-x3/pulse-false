@@ -422,7 +422,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
                   <span className="text-[10px] text-neutral-400">▶</span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="left" align="start" className="w-72 md:w-80 p-4 max-h-[80vh] overflow-y-auto">
+              <PopoverContent side="left" align="start" className="w-72 md:w-80 p-4 max-h-[80vh] overflow-y-auto overflow-x-hidden">
                 <HeaderAccessibilityPanel />
               </PopoverContent>
             </Popover>
@@ -443,7 +443,7 @@ export default function Header({ title, currentUser, onLogout}: HeaderProps) {
                   <span className="text-[10px] text-neutral-400">▶</span>
                 </button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto p-5">
+              <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto overflow-x-hidden p-5">
                 <SheetHeader className="sr-only"><SheetTitle>Accessibility Hub</SheetTitle></SheetHeader>
                 <HeaderAccessibilityPanel />
               </SheetContent>

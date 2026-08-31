@@ -28,7 +28,7 @@ export default function HeaderAccessibilityPanel() {
   } = useAccessibility();
 
   return (
-    <div className="flex flex-col max-h-[70vh] overflow-y-auto custom-scrollbar">
+    <div className="flex flex-col max-h-[70vh] min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
       <div className="flex items-center gap-2 border-b pb-3 mb-4 shrink-0">
         <Accessibility className="h-5 w-5 text-teal-600" />
         <h2 className="font-bold text-neutral-800 text-sm">Accessibility Hub</h2>

@@ -29,7 +29,7 @@ export default function LoginGate({
         <div className="absolute inset-0 flex flex-col justify-end p-16 pb-24 text-white z-10">
           <div className="space-y-4 max-w-md animate-fade-in" style={{ animationDelay: '300ms' }}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 relative"><Image src="/logo.svg" alt="AxionHR Logo" fill className="object-contain filter brightness-0 invert" /></div>
+              <div className="w-12 h-12 relative"><Image src="/logo-icon.svg" alt="AxionHR Logo" fill className="object-contain filter brightness-0 invert" /></div>
               <h2 className="text-2xl font-bold tracking-tight">AxionHR Pulse</h2>
             </div>
             <h1 className="text-4xl font-extrabold leading-tight tracking-tight">Enterprise Telemetry & Well-Being Guardian</h1>

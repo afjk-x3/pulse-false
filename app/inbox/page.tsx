@@ -44,6 +44,7 @@ export default function InboxPage() {
   const [adminConfigs, setAdminConfigs] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [avatarErrors, setAvatarErrors] = useState<Set<string>>(new Set());
 
   // Fetch contacts and admin configs
   useEffect(() => {
@@ -243,8 +244,15 @@ export default function InboxPage() {
               className={`w-full h-auto justify-start gap-3 p-3 rounded-xl ${selectedContact?.id === contact.id ? 'bg-teal-50 hover:bg-teal-50 border-teal-100 border' : 'border border-transparent hover:bg-neutral-50'}`}
             >
               <div className="w-10 h-10 rounded-full bg-neutral-200 overflow-hidden shrink-0 flex items-center justify-center">
-                {contact.avatar || contact.profile_image ? (
-                  <Image src={(contact.avatar || contact.profile_image)!} alt={contact.full_name} width={40} height={40} className="object-cover w-full h-full" />
+                {(contact.avatar || contact.profile_image) && !avatarErrors.has(contact.id) ? (
+                  <Image
+                    src={(contact.avatar || contact.profile_image)!}
+                    alt={contact.full_name}
+                    width={40}
+                    height={40}
+                    className="object-cover w-full h-full"
+                    onError={() => setAvatarErrors(prev => new Set(prev).add(contact.id))}
+                  />
                 ) : (
                   <UserCircle className="w-6 h-6 text-neutral-400" />
                 )}
@@ -266,8 +274,15 @@ export default function InboxPage() {
             <div className="p-4 border-b border-border-color flex items-center justify-between bg-white/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-neutral-200 overflow-hidden shrink-0 flex items-center justify-center">
-                  {selectedContact.avatar || selectedContact.profile_image ? (
-                    <Image src={(selectedContact.avatar || selectedContact.profile_image)!} alt={selectedContact.full_name} width={40} height={40} className="object-cover w-full h-full" />
+                  {(selectedContact.avatar || selectedContact.profile_image) && !avatarErrors.has(selectedContact.id) ? (
+                    <Image
+                      src={(selectedContact.avatar || selectedContact.profile_image)!}
+                      alt={selectedContact.full_name}
+                      width={40}
+                      height={40}
+                      className="object-cover w-full h-full"
+                      onError={() => setAvatarErrors(prev => new Set(prev).add(selectedContact.id))}
+                    />
                   ) : (
                     <UserCircle className="w-6 h-6 text-neutral-400" />
                   )}

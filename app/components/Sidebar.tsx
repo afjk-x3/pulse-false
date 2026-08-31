@@ -89,7 +89,7 @@ export default function Sidebar({ activeTab, isOpen, setIsOpen, currentUser, isC
                     }`}
             >
                 {/* Sidebar Logo Container */}
-                <div className={`p-4 border-b flex items-center justify-between ${highContrast ? 'border-black' : 'border-border-color'
+                <div className={`h-20 px-4 border-b flex items-center justify-between ${highContrast ? 'border-black' : 'border-border-color'
                     }`}>
                     <button
                         onClick={() => {

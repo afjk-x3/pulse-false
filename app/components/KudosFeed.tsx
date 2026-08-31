@@ -250,7 +250,7 @@ export default function KudosFeed() {
  placeholder="Search by name, sender, or keyword..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="pl-10 text-xs font-semibold"
+ className="pl-10 text-xs font-semibold bg-card-bg"
  />
  </div>
 
@@ -407,7 +407,7 @@ export default function KudosFeed() {
  <ChevronsUpDown className="opacity-50 h-4 w-4" />
  </Button>
  </PopoverTrigger>
- <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+ <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
  <Command>
  <CommandInput
  placeholder="Search colleagues..."
