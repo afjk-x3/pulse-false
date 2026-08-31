@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import SentimentWidget from './SentimentWidget';
 import MicroCoachingNudge from './MicroCoachingNudge';
 import LoginGate from './LoginGate';
+import ProfileSetupDialog from './ProfileSetupDialog';
 
 export const AuthContext = React.createContext<any>(null);
 
@@ -239,39 +240,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {setupIncomplete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
-          <div className={`w-full max-w-lg p-6 bg-background rounded-2xl border shadow-xl flex flex-col gap-4 border-border-color`}>
-            <div>
-              <h2 className="text-lg font-bold">Complete Your Profile Setup</h2>
-              <p className="text-xs opacity-70 mt-1">First-time login setup: Please verify and fill out your required profile information.</p>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const pName = formData.get('name') as string;
-              const pPhone = formData.get('phone') as string;
-              const pAddress = formData.get('address') as string;
-
-              if (pName && pPhone) {
-                try {
-                  await supabase.from('user_profiles').update({
-                    full_name: pName.trim(), phone: pPhone.trim(), address: pAddress ? pAddress.trim() : null
-                  }).eq('id', currentUser.id);
-                  triggerRefresh();
-                } catch {
-                  alert('Failed to save profile setup.');
-                }
-              }
-            }} className="space-y-4">
-              <div><label className="block text-xs font-bold mb-1">Full Name *</label><input name="name" type="text" defaultValue={currentUser.full_name} required className="w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold" /></div>
-              <div><label className="block text-xs font-bold mb-1">Work Email (Read-only)</label><input type="email" value={currentUser.email} disabled className="w-full p-2.5 rounded-lg border text-xs bg-black/5 cursor-not-allowed font-semibold focus:outline-none" /></div>
-              <div><label className="block text-xs font-bold mb-1">Phone Number *</label><input name="phone" type="tel" required className="w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold" /></div>
-              <div><label className="block text-xs font-bold mb-1">Residential Address (Optional)</label><input name="address" type="text" className="w-full p-2.5 rounded-lg border text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold" /></div>
-              <button type="submit" className="w-full py-2.5 rounded-xl text-xs font-bold transition-all bg-teal-600 hover:bg-teal-700 text-white">Access Portal</button>
-            </form>
-          </div>
-        </div>
+        <ProfileSetupDialog
+          open={setupIncomplete}
+          currentUser={currentUser}
+          onSaved={triggerRefresh}
+        />
       )}
     </div>
   );
