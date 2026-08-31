@@ -54,6 +54,7 @@ export default function InboxPage() {
         .from('user_profiles')
         .select('*')
         .neq('id', currentUser.id)
+        .not('role', 'in', '(admin,it)')
         .order('full_name');
       if (contactsData) setContacts(contactsData);
 

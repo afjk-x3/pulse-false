@@ -193,7 +193,7 @@ export default function SupportCircles() {
 
  return (
  <>
- <Card className={`grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] lg:h-[550px] glass-card bg-transparent border-transparent shadow-none rounded-2xl overflow-hidden ${highContrast ? 'text-black' : ''}`}>
+ <Card className={`grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] glass-card bg-transparent border-transparent shadow-none rounded-2xl overflow-hidden ${highContrast ? 'text-black' : ''}`}>
  {/* Channels Sidebar List */}
  <div className={`p-4 border-r overflow-y-auto space-y-3.5 flex-col ${mobileView === 'chat' ? 'hidden lg:flex' : 'flex'} ${highContrast ?'border-black' :'border-border-color bg-neutral-50/20'
 }`}>

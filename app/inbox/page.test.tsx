@@ -52,6 +52,7 @@ vi.mock('../lib/supabaseClient', () => ({
         const chain = {
           select: vi.fn(() => chain),
           neq: vi.fn(() => chain),
+          not: vi.fn(() => chain),
           order: vi.fn().mockResolvedValue({ data: CONTACTS, error: null }),
         };
         return chain;

@@ -44,7 +44,7 @@ export default function Sidebar({ activeTab, isOpen, setIsOpen, currentUser, isC
         { id: 'manager' as TabType, label: 'Manager View', icon: Users, desc: 'Team aggregate metrics', roles: ['manager'] },
         { id: 'admin' as TabType, label: 'Admin Control', icon: Sliders, desc: 'System configuration', roles: ['admin', 'it'] },
         { id: 'dashboard' as TabType, label: 'Personal Dashboard', icon: LayoutDashboard, desc: 'View well-being indicators', roles: ['employee', 'manager'] },
-        { id: 'inbox' as TabType, label: 'Direct Messages', icon: MessageCircle, desc: 'Secure internal chat & outbox', roles: ['employee', 'manager', 'admin', 'it'] },
+        { id: 'inbox' as TabType, label: 'Direct Messages', icon: MessageCircle, desc: 'Secure internal chat & outbox', roles: ['employee', 'manager'] },
         { id: 'users' as TabType, label: 'User Management', icon: UserCog, desc: 'Manage accounts & roles', roles: ['admin', 'it'] },
         { id: 'kudos' as TabType, label: 'Kudos Feed', icon: Award, desc: 'Peer recognition wall', roles: ['employee', 'manager'] },
         { id: 'support' as TabType, label: 'Support Circles', icon: Users, desc: 'Connect with support groups', roles: ['employee', 'manager'] },
@@ -167,20 +167,6 @@ export default function Sidebar({ activeTab, isOpen, setIsOpen, currentUser, isC
                         );
                     })}
                 </nav>
-
-                {/* Sidebar Footer Section */}
-                <div className={`p-4 border-t text-[11px] text-neutral-400 font-medium space-y-3.5 ${highContrast ? 'border-black text-black' : 'border-border-color'
-                    }`}>
-                    {/* Footer Info */}                    {!isCollapsed && (
-                        <>
-                            <div className="flex items-center justify-between">
-                                <span>AxionHR WBG v1.0.0</span>
-                                <span className="px-1.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-100 rounded text-[9px] font-bold">PWA ACTIVE</span>
-                            </div>
-                            <p className="leading-tight">Team Privacy Protection: Enabled</p>
-                        </>
-                    )}
-                </div>
             </aside>
         </>
     );

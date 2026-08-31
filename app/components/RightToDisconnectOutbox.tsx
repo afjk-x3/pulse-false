@@ -139,6 +139,19 @@ export default function RightToDisconnectOutbox({ onRefreshStats, refreshTrigger
  const confirmSendAnyway = async () => {
  if (!selectedMessage) return;
 
+ const payload = getPayload(selectedMessage);
+
+ const { error: insertError} = await supabase.from('direct_messages').insert({
+ sender_id: selectedMessage.sender_id,
+ receiver_id: selectedMessage.recipient_id,
+ content: payload.content,
+});
+
+ if (insertError) {
+ console.error('Failed to deliver outbox message:', insertError);
+ return;
+}
+
  const { error: updateError} = await supabase
  .from('outbox_messages')
  .update({ status:'delivered'})
